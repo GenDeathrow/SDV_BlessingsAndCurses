@@ -1,0 +1,14 @@
+﻿{
+   "Name": "Blessings And Curses",
+   "Author": "GenDeathrow",
+   "Version": "1.0.0",
+   "Description": "Gives you random buffs on random days and also adds in Augments to the exploring the mineshaft. Can be used standalone or with twitch integration. If used with twitch integration, your chat will have control over what happens to you.",
+   "UniqueID": "gendeathrow.BNC",
+   "EntryDll": "BNC.dll",
+   "MinimumApiVersion": "2.0",
+   "UpdateKeys": [],
+   	"Dependencies": [{
+		"UniqueID": "darkhax.bookcase",
+		"MinimumVersion": "0.7.0"
+	}]
+}
