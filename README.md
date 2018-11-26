@@ -1,6 +1,6 @@
 # Blessings and Curses [![](http://cf.way2muchnoise.eu/307717.svg)](https://stardewvalley.curseforge.com/projects/307717)
 
-his mod adds a random chance to gain a random buff or debuff  every X amount of days. The random days are configurable via json files.  This mod contains over 28+ buffs/debuffs. On average each buff last 15mins, Some may be lessened. Your Buff will only last the day it was given. Sleep resets the buff. 
+This mod adds a random chance to gain a random buff or debuff  every X amount of days. The random days are configurable via json files.  This mod contains over 28+ buffs/debuffs. On average each buff last 15mins, Some may be lessened. Your Buff will only last the day it was given. Sleep resets the buff. 
 
  
 
