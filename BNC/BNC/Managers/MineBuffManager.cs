@@ -22,11 +22,15 @@ namespace BNC
         {
             Augments.Add("health", new AugmentOption("health", "Monster Health Increase", "Monster have 1.5x more health."));
             Augments.Add("regen", new AugmentOption("regen", "Health Regen", "Player regens health over time."));
-            Augments.Add("harder", new AugmentOption("harder", "Monster Attack Increase", "Monster have 1.5x more attack power"));
+            Augments.Add("stamina", new AugmentOption("stamina", "Stamina Regen", "Player regens stamina over time."));
+            Augments.Add("attack", new AugmentOption("attack", "Monster Attack Increase", "Monster have 1.5x more attack power"));
             Augments.Add("exp", new AugmentOption("exp", "Extra Exp!", "Monster have 1.5x more experiance."));
+            Augments.Add("blood", new AugmentOption("blood", "Bleeding Out", "Player loses health over time."));
+            Augments.Add("tired", new AugmentOption("tired", "Getting Tired", "Player loses stamina over time."));
+
+            // not entirely working
             //Augments.Add("crabs", new AugmentOption("crabs", "You have crabs!", "Spawns Crabs on each level"));
             //Augments.Add("extra", new AugmentOption("extra", "More Mobs", "More mobs per level."));
-            Augments.Add("loss", new AugmentOption("loss", "Bleeding Out", "Player loses health over time."));
         }
 
         public static void mineLevelChanged(object sender, EventArgsMineLevelChanged e)
@@ -57,9 +61,9 @@ namespace BNC
             List<AugmentOption> returnList = new List<AugmentOption>();
             while (returnList.Count < 3)
             {
-                AugmentOption item = list[Game1.random.Next(list.Count - 1)];
-
-                if (!returnList.Contains(item))
+                int num = Game1.random.Next(list.Count);
+                AugmentOption item = list[num];
+                if (item != null && !returnList.Contains(item))
                     returnList.Add(item);
             }
             return returnList.ToArray();
@@ -72,7 +76,7 @@ namespace BNC
 
         public static bool shouldUpdateAugment(EventArgsMineLevelChanged e)
         {
-            if (e.CurrentMineLevel % 1 == 0 || CurrentAugment == null)
+            if (isMineShaft() && (e.CurrentMineLevel % BNC_Core.config.Mine_Augment_Every_x_Levels == 0 || CurrentAugment == null || e.CurrentMineLevel == 1))
                 return true;
             return false;
         }
@@ -110,7 +114,7 @@ namespace BNC
                         int cnt = Game1.random.Next(2) + 1;
                         for (int i = 0; i < cnt; i++) 
                             queue.Add(new RockCrab(Vector2.Zero));
-                        BNC_Core.Logger.Log($"Added {cnt} crabs");
+                        //BNC_Core.Logger.Log($"Added {cnt} crabs");
                         break;
                     case "extra":
                         foreach (NPC n in Game1.currentLocation.characters)
@@ -166,17 +170,33 @@ namespace BNC
                 case "regen":
                     if (augmentTick++ > 0)
                     {
-                        if(Game1.player.health+1 < Game1.player.maxHealth)
+                        if(Game1.player.health+1 <= Game1.player.maxHealth)
                             Game1.player.health += 1;
 
                         augmentTick = 0;
                     }
                     break;
                 case "loss":
-                    if (augmentTick++ > 5)
+                    if (augmentTick++ > 1)
                     {
-                        if (Game1.player.health > (Game1.player.health * 0.25))
+                        if (Game1.player.health > (Game1.player.maxHealth * 0.25))
                             Game1.player.health -= 1;
+                        augmentTick = 0;
+                    }
+                    break;
+                case "stamina":
+                    if (augmentTick++ > 0)
+                    {
+                        if (Game1.player.Stamina + 2 <= Game1.player.MaxStamina)
+                            Game1.player.Stamina += 2;
+                        augmentTick = 0;
+                    }
+                    break;
+                case "tired":
+                    if (augmentTick++ > 1)
+                    {
+                        if (Game1.player.Stamina > (Game1.player.MaxStamina * 0.25))
+                            Game1.player.Stamina -= 2;
                         augmentTick = 0;
                     }
                     break;

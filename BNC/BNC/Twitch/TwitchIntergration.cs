@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StardewValley.Menus;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI.Events;
-
+using BNC.Configs;
 
 namespace BNC
 {
@@ -34,7 +34,7 @@ namespace BNC
         public static Dictionary<BuffManager.BuffOption, int> votes;
         public static Dictionary<MineBuffManager.AugmentOption, int> augvotes;
 
-        private static int voteTime = 30;
+        
         private static int currentTick = 30;
 
         private static List<String> currentDisplayText = new List<string>();
@@ -89,18 +89,22 @@ namespace BNC
 
         private static void OnConnectionError(object sender, OnConnectionErrorArgs e)
         {
-            BNC_Core.Logger.Log($"Twitch Integration Error {e.Error.Message}");
+            BNC_Core.Logger.Log($"Twitch Integration Connection Error {e.Error.Message}");
         }
 
         private static void onTimertick(object sender, ElapsedEventArgs e)
         {
             if (currentTick-- <= 0)
-                EndBuffPoll();
+                if (hasPollStarted)
+                    EndBuffPoll();
+                else if (hasMinePollStarted)
+                    EndMinePoll();
         }
 
         private static void UpdateVotingText()
         {
             currentDisplayText.Clear();
+
             if (hasPollStarted)
             {
                 int maximum = 0;
@@ -117,12 +121,15 @@ namespace BNC
                 int maximum = 0;
                 foreach (int count in augvotes.Values)
                     maximum += count;
-
+                BNC_Core.Logger.Log("update text poll");
                 foreach (KeyValuePair<MineBuffManager.AugmentOption, int> vote in augvotes)
                 {
                     int perc = (vote.Value == 0 || maximum == 0) ? 0 : Convert.ToInt32(((double)vote.Value / maximum) * 100);
                     currentDisplayText.Add($"{vote.Key.DisplayName} [{vote.Key.id}] ({perc}%) -- {vote.Key.desc}");
                 }
+
+                foreach(string str in currentDisplayText)
+                    BNC_Core.Logger.Log(str);
             }
         }
 
@@ -177,7 +184,7 @@ namespace BNC
         public static void EndBuffPoll()
         {
             BNC_Core.Logger.Log($"Poll has ended!");
-            currentTick = voteTime;
+            currentTick = Config.getVotingTime();
             timer.Stop();
             hasPollStarted = false;
 
@@ -208,17 +215,16 @@ namespace BNC
             }
             else
                 BNC_Core.Logger.Log($"Error: {selectedId} Buff was null");
+
+            votes.Clear();
         }
 
         public static void StartMinePoll(MineBuffManager.AugmentOption[] augments)
         {
-
             BNC_Core.Logger.Log($"Poll has started...");
 
             if (!BNC_Core.DebugMode)
-            {
-                client.SendMessage(channel, $"----> Time to choose :");
-            }
+                client.SendMessage(channel, $"----> Time to choose:");
 
             augvotes = new Dictionary<MineBuffManager.AugmentOption, int>();
             string buildMsg = "";
@@ -240,7 +246,7 @@ namespace BNC
         public static void EndMinePoll()
         {
             BNC_Core.Logger.Log($"Poll has ended!");
-            currentTick = voteTime;
+            currentTick = Config.getVotingTime();
             timer.Stop();
             hasMinePollStarted = false;
 
@@ -271,6 +277,8 @@ namespace BNC
             }
             else
                 BNC_Core.Logger.Log($"Error: {selectedId} Buff was null");
+
+            augvotes.Clear();
         }
 
 
@@ -305,21 +313,37 @@ namespace BNC
             if (!Context.IsWorldReady)
                 return;
 
-            if (hasPollStarted && !usersVoted.Contains(e.ChatMessage.UserId))
+            if (hasMinePollStarted && !usersVoted.Contains(e.ChatMessage.UserId))
+            {
+                List<MineBuffManager.AugmentOption> keysvalue = new List<MineBuffManager.AugmentOption>(augvotes.Keys);
+                foreach (MineBuffManager.AugmentOption vote in keysvalue)
+                {
+                    BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augvotes[vote]}");
+
+                    if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
+                    {
+                        augvotes[vote]++; ;
+                        BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augvotes[vote]}");
+                        usersVoted.Add(e.ChatMessage.UserId);
+                        UpdateVotingText();
+                    }
+                }
+            }
+            else if (hasPollStarted && !usersVoted.Contains(e.ChatMessage.UserId))
             {
                 List<BuffManager.BuffOption> keysvalue = new List<BuffManager.BuffOption>(votes.Keys);
-                    foreach (BuffManager.BuffOption vote in keysvalue)
-                    {
-                        BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
+                foreach (BuffManager.BuffOption vote in keysvalue)
+                {
+                    BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
 
-                        if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
-                        {
-                            votes[vote]++; ;
-                            BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
-                            usersVoted.Add(e.ChatMessage.UserId);
-                            UpdateVotingText();
-                        }
+                    if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
+                    {
+                        votes[vote]++; 
+                        BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
+                        usersVoted.Add(e.ChatMessage.UserId);
+                        UpdateVotingText();
                     }
+                }
             }
             else if (BNC_Core.config.Use_Bits_To_Spawn_Mobs && e.ChatMessage.Bits > 0)
             {
@@ -351,7 +375,7 @@ namespace BNC
 
         private static void GraphicsEvents_OnPostRenderHudEvent(object sender, EventArgs e)
         {
-            if (!Context.IsWorldReady || !hasPollStarted || currentDisplayText.Count < 1 &&  Game1.CurrentEvent == null)
+            if (!Context.IsWorldReady || (!hasPollStarted && !hasMinePollStarted) || currentDisplayText.Count < 1 &&  Game1.CurrentEvent == null)
                 return;
 
             int num1 = 64;

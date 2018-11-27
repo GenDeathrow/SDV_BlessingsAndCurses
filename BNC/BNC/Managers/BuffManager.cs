@@ -1,4 +1,6 @@
-﻿using StardewValley;
+﻿using BNC.Configs;
+using Microsoft.Xna.Framework;
+using StardewValley;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +24,7 @@ namespace BNC
             AddBuff(new BuffOption("badfish", "Bad Fishing Advice").add_fishing(-5).addShortDesc("Debuff fishing -5"));
             AddBuff(new BuffOption("w2", "+2 Weapon").add_attack(2).addShortDesc("Buff Attack +2"));
             AddBuff(new BuffOption("w4", "+4 Weapon").add_attack(4).addShortDesc("Buff Attack +4"));
-            AddBuff(new BuffOption("beserk","Beserker").add_attack(10).addShortDesc("Buff Attack +10"));
+            AddBuff(new BuffOption("beserk","Beserker", true, 600).add_attack(6).addShortDesc("Buff Attack +6").setGlow(Color.OrangeRed));
             AddBuff(new BuffOption("rusted","Rusted Weapon").add_attack(-2).addShortDesc("Debuff Attack -2"));
             AddBuff(new BuffOption("broken","Broken Weapon").add_attack(-4).addShortDesc("Debuff Attack -4"));
             AddBuff(new BuffOption("missing","Missing Weapon").add_attack(-8).addShortDesc("Debuff Attack -8"));
@@ -37,8 +39,8 @@ namespace BNC
             AddBuff(new BuffOption("carnivore","Carnivore").add_foraging(-4).addShortDesc("Debuff Defense -4"));
             AddBuff(new BuffOption("worksout", "Works Out").add_maxStamina(80).addShortDesc("Buff Stamina +80"));
             AddBuff(new BuffOption("potato", "Couch Potato").add_maxStamina(-80).addShortDesc("Debuff Stamina -80"));
-            AddBuff(new BuffOption("bionic","Bionic Legs").add_speed(4).addShortDesc("Buff Speed +4"));
-            AddBuff(new BuffOption("short", "I'm Just Short").add_speed(-2).addShortDesc("Debuff Speed -2"));
+            AddBuff(new BuffOption("bionic","Bionic Legs", true, 600).add_speed(4).addShortDesc("Buff Speed +4").setGlow(Color.LightBlue));
+            AddBuff(new BuffOption("short", "I'm Just Short", false, 600).add_speed(-2).addShortDesc("Debuff Speed -2"));
             AddBuff(new BuffOption("clover", "Lucky").add_luck(2).addShortDesc("Buff Luck +2"));
             AddBuff(new BuffOption("stepped", "UnLucky").add_luck(-2).addShortDesc("Debuff Luck -2"));
             AddBuff(new BuffOption("lottery", "Lottery Winner").add_luck(4).addShortDesc("Buff Luck +4"));
@@ -63,9 +65,9 @@ namespace BNC
             List<BuffOption> returnList = new List<BuffOption>();
             while(returnList.Count < 3)
             {
-                BuffOption item = list[rand.Next(list.Count - 1)];
+                BuffOption item = list[rand.Next(list.Count)];
 
-                if(!returnList.Contains(item))
+                if(item != null && !returnList.Contains(item))
                     returnList.Add(item);
             }
             return returnList.ToArray(); 
@@ -102,9 +104,11 @@ namespace BNC
         {
 
             if (BNC_Core.BNCSave.nextBuffDate <= -1)
-                BNC_Core.BNCSave.nextBuffDate = setNextBuffDay(BNC_Core.config.Random_Day_Buff_Min_Max[0], BNC_Core.config.Random_Day_Buff_Min_Max[1]);
-
-            BNC_Core.Logger.Log("buff countdown: " + BNC_Core.BNCSave.nextBuffDate);
+            {
+                int[] Min_Max = Config.getBuffMinMax();
+                BNC_Core.BNCSave.nextBuffDate = setNextBuffDay(Min_Max[0], Min_Max[1]);
+            }
+            //BNC_Core.Logger.Log("buff countdown: " + BNC_Core.BNCSave.nextBuffDate);
             if (BNC_Core.BNCSave.nextBuffDate-- == 0)
             {
                 BuffOption[] buffs = getRandomBuff(3);
@@ -112,7 +116,7 @@ namespace BNC
                 foreach (BuffOption buff in buffs)
                     BNC_Core.Logger.Log($"buff selecting from {buff.displayName}");
 
-                if (TwitchIntergration.isConnected() && BNC_Core.config.Random_Day_Buffs)
+                if (TwitchIntergration.isConnected())
                 {
                     TwitchIntergration.StartBuffPoll(buffs);
                 }
@@ -121,7 +125,8 @@ namespace BNC
                     BuffOption selected = buffs[rand.Next(buffs.Count() - 1)];
                     BNC_Core.Logger.Log($"Selected {selected.displayName}");
                     buffPlayer(selected);
-                    BNC_Core.BNCSave.nextBuffDate = setNextBuffDay(BNC_Core.config.Random_Day_Buff_Min_Max[0], BNC_Core.config.Random_Day_Buff_Min_Max[1]);
+                    int[] Min_Max = Config.getBuffMinMax();
+                    BNC_Core.BNCSave.nextBuffDate = setNextBuffDay(Min_Max[0], Min_Max[1]);
                 }
             }
 
@@ -130,11 +135,24 @@ namespace BNC
         public static void buffPlayer(BuffOption buff)
         {
             Buff buffselected = new Buff(buff.farming, buff.fishing, buff.mining, 0, 0, buff.foraging, buff.crafting, buff.maxStamina, buff.magneticRadius, buff.speed, buff.defense, buff.attack, buff.duration, buff.displayName, buff.displayName);
+
+            buffselected.source = buff.displayName;
+
+            if (buff.color != Color.White)
+                buffselected.glow = buff.color;
+
             Game1.buffsDisplay.addOtherBuff(buffselected);
+
+            if (buff.Equals(CommonBuffs["potato"]))
+            {
+                if(Game1.player.Stamina > Game1.player.MaxStamina) Game1.player.Stamina = Game1.player.MaxStamina;
+            }
         }
 
         public static int setNextBuffDay(int number1, int number2)
         {
+            if (number1.Equals(number2)) return number1;
+
             int min = Math.Min(number1, number2);
             int max = Math.Max(number1, number2);
             int random = min != max ? rand.Next(max - min) + min : rand.Next(min - 1) + 1;
@@ -165,6 +183,7 @@ namespace BNC
             public string id { get; set; }
             public string description { get; set; } = "null";
             public string shortdesc { get; set; } = "null";
+            public Color color { get; set; } = Color.White;
 
             public BuffOption(string id, string name, bool isBuff = true, int duration = 1200)
             {
@@ -254,6 +273,12 @@ namespace BNC
             public BuffOption setDuration(int value)
             {
                 this.duration = value;
+                return this;
+            }
+
+            public BuffOption setGlow(Color color)
+            {
+                this.color = color;
                 return this;
             }
 

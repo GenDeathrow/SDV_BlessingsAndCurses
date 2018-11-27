@@ -3,7 +3,6 @@ using BNC.Configs;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
-using StardewValley.Characters;
 using System;
 
 namespace BNC
@@ -22,6 +21,9 @@ namespace BNC
         {
             helper = helperIn;
             Logger = this.Monitor;
+            config = helper.ReadConfig<Config>();
+            TwitchIntergration.LoadConfig(helperIn);
+
             MineEvents.MineLevelChanged += MineBuffManager.mineLevelChanged;
 
             BookcaseEvents.GameQuaterSecondTick.Add(QuaterSecondUpdate);
@@ -36,27 +38,27 @@ namespace BNC
             BuffManager.Init();
             MineBuffManager.Init();
             Spawner.Init();
-            config = helper.ReadConfig<Config>();
-            TwitchIntergration.LoadConfig(helperIn);
-            //if(DebugMode)
-              //  InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
-        }
 
+            //if(DebugMode)
+                //InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
+        }
+        
         Spawner spawner = new Spawner();
         private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
         {
             if (e.Button.Equals(SButton.K)) {
                 for (int i = 0; i < 3; i++)
                 {
-                    //TwitchSlime m = new TwitchSlime(Vector2.Zero);
-                    //m.Name = "test name"+ (i > 0 ? "'s minion" : "");
-                    //Spawner.addMonsterToSpawn(m);
+                    TwitchSlime m = new TwitchSlime(Vector2.Zero);
+                    m.Name = "test name"+ (i > 0 ? "'s minion" : "");
+                    Spawner.addMonsterToSpawn(m);
 
 
-                    Junimo j = new TwitchJunimo(Vector2.Zero);
-                    j.Name = "test name" + (i > 0 ? "'s npc" : "");
-                    j.collidesWithOtherCharacters.Value = false;
-                    Spawner.addSubToSpawn(j);
+
+                    //Junimo j = new TwitchJunimo(Vector2.Zero);
+                    //j.Name = "test name" + (i > 0 ? "'s npc" : "");
+                    //j.collidesWithOtherCharacters.Value = false;
+                    //Spawner.addSubToSpawn(j);
                 }
             }
         }
@@ -89,7 +91,9 @@ namespace BNC
         private void NewDayEvent(object sender, EventArgs e) {
             if (!Context.IsWorldReady)
                 return;
-            BuffManager.UpdateDay();
+
+            if (BNC_Core.config.Random_Day_Buffs)
+                BuffManager.UpdateDay();
         }
 
         private void QuaterSecondUpdate(Bookcase.Events.Event args)
@@ -106,6 +110,5 @@ namespace BNC
                 return;
             MineBuffManager.UpdateTick();
         }
-            
     }
 }
