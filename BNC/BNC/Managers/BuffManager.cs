@@ -18,33 +18,33 @@ namespace BNC
 
         public static void Init()
         {
-            AddBuff(new BuffOption("greenthumb", "Green Thumb").add_farming(4).addShortDesc("Buff farming +4"));
-            AddBuff(new BuffOption("brownthumb", "Brown Thumb").add_farming(-4).addShortDesc("Debuff farming -4"));
-            AddBuff(new BuffOption("goodfish","Good Fishing Advice").add_fishing(5).addShortDesc("Buff fishing +5"));
-            AddBuff(new BuffOption("badfish", "Bad Fishing Advice").add_fishing(-5).addShortDesc("Debuff fishing -5"));
+            AddBuff(new BuffOption("greenthumb", "Green Thumb").add_farming(4).addShortDesc("Buff Farming +4"));
+            AddBuff(new BuffOption("brownthumb", "Brown Thumb", false).add_farming(-4).addShortDesc("Debuff Farming -4"));
+            AddBuff(new BuffOption("goodfish","Good Fishing Advice").add_fishing(5).addShortDesc("Buff Fishing +5"));
+            AddBuff(new BuffOption("badfish", "Bad Fishing Advice", false).add_fishing(-5).addShortDesc("Debuff Fishing -5"));
             AddBuff(new BuffOption("w2", "+2 Weapon").add_attack(2).addShortDesc("Buff Attack +2"));
             AddBuff(new BuffOption("w4", "+4 Weapon").add_attack(4).addShortDesc("Buff Attack +4"));
             AddBuff(new BuffOption("beserk","Beserker", true, 600).add_attack(6).addShortDesc("Buff Attack +6").setGlow(Color.OrangeRed));
-            AddBuff(new BuffOption("rusted","Rusted Weapon").add_attack(-2).addShortDesc("Debuff Attack -2"));
-            AddBuff(new BuffOption("broken","Broken Weapon").add_attack(-4).addShortDesc("Debuff Attack -4"));
-            AddBuff(new BuffOption("missing","Missing Weapon").add_attack(-8).addShortDesc("Debuff Attack -8"));
+            AddBuff(new BuffOption("rusted","Rusted Weapon", false).add_attack(-2).addShortDesc("Debuff Attack -2"));
+            AddBuff(new BuffOption("broken","Broken Weapon", false).add_attack(-4).addShortDesc("Debuff Attack -4"));
+            AddBuff(new BuffOption("missing","Missing Weapon", false).add_attack(-8).addShortDesc("Debuff Attack -8"));
             AddBuff(new BuffOption("a2","+2 Armor").add_defense(2).addShortDesc("Buff Defense +2"));
             AddBuff(new BuffOption("a3","+3 Armor").add_defense(3).addShortDesc("Buff Defense +3"));
-            AddBuff(new BuffOption("a-2","-2 Armor").add_defense(-2).addShortDesc("Debuff Defense -3"));
-            AddBuff(new BuffOption("a-3", "-3 Armor").add_defense(-3).addShortDesc("Debuff Defense -3"));
+            AddBuff(new BuffOption("a-2","-2 Armor", false).add_defense(-2).addShortDesc("Debuff Defense -2"));
+            AddBuff(new BuffOption("a-3", "-3 Armor", false).add_defense(-3).addShortDesc("Debuff Defense -3"));
             AddBuff(new BuffOption("hippie", "Hippie").add_foraging(2).addShortDesc("Buff Foraging +2"));
             AddBuff(new BuffOption("vegan", "Vegan").add_foraging(4).addShortDesc("Buff Foraging +4"));
-            AddBuff(new BuffOption("lumber", "Lumberjack").add_foraging(8).addShortDesc("Buff Defense +8"));
-            AddBuff(new BuffOption("yuppie", "Yuppies").add_foraging(-2).addShortDesc("Debuff Defense -2"));
-            AddBuff(new BuffOption("carnivore","Carnivore").add_foraging(-4).addShortDesc("Debuff Defense -4"));
-            AddBuff(new BuffOption("worksout", "Works Out").add_maxStamina(80).addShortDesc("Buff Stamina +80"));
+            AddBuff(new BuffOption("lumber", "Lumberjack").add_foraging(8).addShortDesc("Buff Foraging +8"));
+            AddBuff(new BuffOption("yuppie", "Yuppies", false).add_foraging(-2).addShortDesc("Debuff Foraging -2"));
+            AddBuff(new BuffOption("carnivore","Carnivore", false).add_foraging(-4).addShortDesc("Debuff Foraging -4"));
+            AddBuff(new BuffOption("worksout", "Works Out", false).add_maxStamina(80).addShortDesc("Buff Stamina +80"));
             AddBuff(new BuffOption("potato", "Couch Potato").add_maxStamina(-80).addShortDesc("Debuff Stamina -80"));
             AddBuff(new BuffOption("bionic","Bionic Legs", true, 600).add_speed(4).addShortDesc("Buff Speed +4").setGlow(Color.LightBlue));
             AddBuff(new BuffOption("short", "I'm Just Short", false, 600).add_speed(-2).addShortDesc("Debuff Speed -2"));
             AddBuff(new BuffOption("clover", "Lucky").add_luck(2).addShortDesc("Buff Luck +2"));
-            AddBuff(new BuffOption("stepped", "UnLucky").add_luck(-2).addShortDesc("Debuff Luck -2"));
+            AddBuff(new BuffOption("stepped", "UnLucky", false).add_luck(-2).addShortDesc("Debuff Luck -2"));
             AddBuff(new BuffOption("lottery", "Lottery Winner").add_luck(4).addShortDesc("Buff Luck +4"));
-            AddBuff(new BuffOption("mirror", "Broke a Mirror").add_luck(-8).addShortDesc("Debuff Luck -8"));
+            AddBuff(new BuffOption("mirror", "Broke a Mirror", false).add_luck(-4).addShortDesc("Debuff Luck -8"));
         }
 
         public static void AddBuff(BuffOption buff)
@@ -108,13 +108,13 @@ namespace BNC
                 int[] Min_Max = Config.getBuffMinMax();
                 BNC_Core.BNCSave.nextBuffDate = setNextBuffDay(Min_Max[0], Min_Max[1]);
             }
-            //BNC_Core.Logger.Log("buff countdown: " + BNC_Core.BNCSave.nextBuffDate);
             if (BNC_Core.BNCSave.nextBuffDate-- == 0)
             {
                 BuffOption[] buffs = getRandomBuff(3);
 
-                foreach (BuffOption buff in buffs)
-                    BNC_Core.Logger.Log($"buff selecting from {buff.displayName}");
+                if (Config.ShowDebug())
+                    foreach (BuffOption buff in buffs)
+                        BNC_Core.Logger.Log($"buff selecting from {buff.displayName}");
 
                 if (TwitchIntergration.isConnected())
                 {
@@ -123,7 +123,8 @@ namespace BNC
                 else
                 {
                     BuffOption selected = buffs[rand.Next(buffs.Count() - 1)];
-                    BNC_Core.Logger.Log($"Selected {selected.displayName}");
+                    if (Config.ShowDebug())
+                        BNC_Core.Logger.Log($"Selected {selected.displayName}");
                     buffPlayer(selected);
                     int[] Min_Max = Config.getBuffMinMax();
                     BNC_Core.BNCSave.nextBuffDate = setNextBuffDay(Min_Max[0], Min_Max[1]);
@@ -147,6 +148,8 @@ namespace BNC
             {
                 if(Game1.player.Stamina > Game1.player.MaxStamina) Game1.player.Stamina = Game1.player.MaxStamina;
             }
+
+            Game1.addHUDMessage(new HUDMessage(buff.shortdesc, buff.isBuff ? 4 : 3));
         }
 
         public static int setNextBuffDay(int number1, int number2)
@@ -178,7 +181,7 @@ namespace BNC
             public int defense { get; set; }
             public int attack { get; set; }
             public int duration { get; set; }
-            private bool isBuff { get; set; }
+            public bool isBuff { get; set; }
             public string displayName { get; set; }
             public string id { get; set; }
             public string description { get; set; } = "null";

@@ -2,11 +2,11 @@
    "Name": "Blessings And Curses",
    "Author": "GenDeathrow",
    "Version": "1.0.0",
-   "Description": "Gives you random buffs on random days and also adds in Augments to the exploring the mineshaft. Can be used standalone or with twitch integration. If used with twitch integration, your chat will have control over what happens to you.",
+   "Description": "Recieve blessings or curses and combat augments, Also has Twitch chat integration",
    "UniqueID": "gendeathrow.BNC",
    "EntryDll": "BNC.dll",
    "MinimumApiVersion": "2.0",
-   "UpdateKeys": [],
+   "UpdateKeys": ["GitHub:GenDeathrow/SDV_BlessingsAndCurses"],
    	"Dependencies": [{
 		"UniqueID": "darkhax.bookcase",
 		"MinimumVersion": "0.7.0"

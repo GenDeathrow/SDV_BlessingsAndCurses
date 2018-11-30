@@ -3,6 +3,8 @@ namespace BNC.Configs
 {
     public class Config
     {
+        public bool Enable_Twitch_Integration { get; set; } = true;
+
         public bool Random_Day_Buffs { get; set; } = true;
 
         public int[] Random_Day_Buff_Min_Max { get; set; } = new int[] { 2, 4 };
@@ -15,8 +17,9 @@ namespace BNC.Configs
 
         public int Mine_Augment_Every_x_Levels { get; set; } = 5;
 
-        public int Twitch_Vote_Time_In_Secs { get; set; } = 30;
+        public int Twitch_Vote_Time_In_Secs { get; set; } = 45;
 
+        public bool Show_Debug_Text { get; set; } = false;
 
 
         public static int[] getBuffMinMax()
@@ -33,6 +36,11 @@ namespace BNC.Configs
         public static int getVotingTime()
         {
             return BNC_Core.config.Twitch_Vote_Time_In_Secs;
+        }
+
+        public static bool ShowDebug()
+        {
+            return BNC_Core.config.Show_Debug_Text;
         }
 
     }

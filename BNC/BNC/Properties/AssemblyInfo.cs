@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Blessing and Curses")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Blessings and Curses")]
+[assembly: AssemblyDescription("Recieve blessings or curses and combat augments, Also has Twitch chat integration")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("GenDeathrow")]
 [assembly: AssemblyProduct("BNC")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]

@@ -57,7 +57,7 @@ namespace BNC
             Game1.player.currentLocation.characters.Add((NPC)m);
             MobsSpawned.Add(m);
 
-            if (m is Monster)
+            if (m is GreenSlime)
                 Game1.player.currentLocation.playSoundAt("slime", v);
 
             return true;

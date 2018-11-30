@@ -15,14 +15,14 @@ namespace BNC
         public static IMonitor Logger;
         public static Config config = new Config();
 
-        public static bool DebugMode = false;
-
         public override void Entry(IModHelper helperIn)
         {
             helper = helperIn;
             Logger = this.Monitor;
             config = helper.ReadConfig<Config>();
-            TwitchIntergration.LoadConfig(helperIn);
+
+            if(config.Enable_Twitch_Integration)
+                TwitchIntergration.LoadConfig(helperIn);
 
             MineEvents.MineLevelChanged += MineBuffManager.mineLevelChanged;
 
@@ -34,6 +34,7 @@ namespace BNC
             SaveEvents.BeforeSave += BeforeSaveEvent;
             SaveEvents.AfterReturnToTitle += OnReturnToTitle;
             SaveEvents.AfterCreate += OnCreate;
+
 
             BuffManager.Init();
             MineBuffManager.Init();

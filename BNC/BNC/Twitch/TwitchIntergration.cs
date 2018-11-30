@@ -121,15 +121,11 @@ namespace BNC
                 int maximum = 0;
                 foreach (int count in augvotes.Values)
                     maximum += count;
-                BNC_Core.Logger.Log("update text poll");
                 foreach (KeyValuePair<MineBuffManager.AugmentOption, int> vote in augvotes)
                 {
                     int perc = (vote.Value == 0 || maximum == 0) ? 0 : Convert.ToInt32(((double)vote.Value / maximum) * 100);
                     currentDisplayText.Add($"{vote.Key.DisplayName} [{vote.Key.id}] ({perc}%) -- {vote.Key.desc}");
                 }
-
-                foreach(string str in currentDisplayText)
-                    BNC_Core.Logger.Log(str);
             }
         }
 
@@ -142,38 +138,59 @@ namespace BNC
         }
 
         static int reconnectTrys = 0;
-        public static void attemptReconnect()
+        public static void attemptReconnect(string msg = null)
         {
             if (reconnectTrys >= 4)
                 return;
+            BNC_Core.Logger.Log($"Attempting to reconnect to the channel {channel}...");
 
             if (reconnectTrys++ < 4)
-                if(client != null)
-                    client.Connect();
-            else
-                BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed");
+            {
+                if (client != null)
+                {
+                    Connet();
+
+                    if (msg != null) sendMessage(msg);
+                }
+                else
+                    BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed");
+            }
+        }
+
+        private static bool sendMessage(string msg)
+        {
+            try
+            {
+                client.SendMessage(channel, msg);
+                return true;
+            }
+            catch(Exception e)
+            {
+                attemptReconnect();
+                BNC_Core.Logger.Log("Faild to send message to Twitch! >>> "+ e);
+                return false;
+            }
         }
 
         public static void StartBuffPoll(BuffManager.BuffOption[] buffs)
         {
-            BNC_Core.Logger.Log($"Poll has started...");
 
-            if (!BNC_Core.DebugMode)
-            {
-                client.SendMessage(channel, $"----> The Time has come to choose the next Buff/Debuff!!!");
-                client.SendMessage(channel, "Please choose one of the following Options: ");
-            }
+            if(Config.ShowDebug())
+                BNC_Core.Logger.Log($"Poll has started...");
+
+           if (!sendMessage($"---> TIME TO CHOOSE A BLESSING/CURSE!"))
+               return;
 
             votes = new Dictionary<BuffManager.BuffOption, int>();
-            string buildMsg =  "";
+            string buildMsg =  "[";
             foreach (BuffManager.BuffOption buff in buffs)
             {
-                buildMsg += $"[{buff.id}] {(buffs.GetValue(buffs.Length-1) == buff ? "" : ",")}";
+                buildMsg += $"{buff.id} {(buffs.GetValue(buffs.Length-1) == buff ? "" : " / ")}";
                 votes.Add(buff, 0);
             }
+            buildMsg += "]";
 
-            if (!BNC_Core.DebugMode)
-                client.SendMessage(channel, buildMsg);
+            sendMessage(buildMsg);
 
             timer.Start();
             hasPollStarted = true;
@@ -183,12 +200,14 @@ namespace BNC
 
         public static void EndBuffPoll()
         {
-            BNC_Core.Logger.Log($"Poll has ended!");
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Poll has ended!");
             currentTick = Config.getVotingTime();
             timer.Stop();
             hasPollStarted = false;
 
-            BNC_Core.Logger.Log($"Time to tally the votes!");
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Time to tally the votes!");
 
             BuffManager.BuffOption selectedId = null;
             int votecount = -1;
@@ -203,39 +222,39 @@ namespace BNC
 
             if (selectedId != null)
             {
-                BNC_Core.Logger.Log($"Chat has selected {selectedId.displayName} : vote# {votecount}");
+                if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Chat has selected {selectedId.displayName} : vote# {votecount}");
 
                 BuffManager.AddBuffToQueue(selectedId);
 
-                if (!BNC_Core.DebugMode)
-                    client.SendMessage(channel, $"Chat has spoken! Selected {selectedId.displayName}!");
+                sendMessage($"Chat has spoken! Selected {selectedId.displayName}!");
 
                 if(selectedId.hudMessage != null)
                     Game1.addHUDMessage(new HUDMessage(selectedId.hudMessage, null));
             }
-            else
-                BNC_Core.Logger.Log($"Error: {selectedId} Buff was null");
+            else if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Error: {selectedId} Buff was null");
 
             votes.Clear();
         }
 
         public static void StartMinePoll(MineBuffManager.AugmentOption[] augments)
         {
-            BNC_Core.Logger.Log($"Poll has started...");
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Poll has started...");
 
-            if (!BNC_Core.DebugMode)
-                client.SendMessage(channel, $"----> Time to choose:");
+            sendMessage($"---> TIME TO CHOOSE A COMBAT AUGMENT!");
 
             augvotes = new Dictionary<MineBuffManager.AugmentOption, int>();
-            string buildMsg = "";
+            string buildMsg = "[";
             foreach (MineBuffManager.AugmentOption aug in augments)
             {
-                buildMsg += $"[{aug.id}] {(augments[augments.Length - 1] == aug ? "" : ",")}";
+                buildMsg += $"{aug.id} {(augments[augments.Length - 1] == aug ? "" : " / ")}";
                 augvotes.Add(aug, 0);
             }
+            buildMsg += "]";
 
-            if (!BNC_Core.DebugMode)
-                client.SendMessage(channel, buildMsg);
+            sendMessage(buildMsg);
 
             timer.Start();
             hasMinePollStarted = true;
@@ -245,12 +264,14 @@ namespace BNC
 
         public static void EndMinePoll()
         {
-            BNC_Core.Logger.Log($"Poll has ended!");
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Poll has ended!");
             currentTick = Config.getVotingTime();
             timer.Stop();
             hasMinePollStarted = false;
 
-            BNC_Core.Logger.Log($"Time to tally the votes!");
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Time to tally the votes!");
 
             MineBuffManager.AugmentOption selectedId = null;
             int votecount = -1;
@@ -265,17 +286,17 @@ namespace BNC
 
             if (selectedId != null)
             {
-                BNC_Core.Logger.Log($"Chat has selected {selectedId.DisplayName} : vote# {votecount}");
+                if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Chat has selected {selectedId.DisplayName} : vote# {votecount}");
 
                 MineBuffManager.CurrentAugment = selectedId.id;
 
-                if (!BNC_Core.DebugMode)
-                    client.SendMessage(channel, $"Chat has spoken! Selected {selectedId.DisplayName}!");
+                sendMessage($"Chat has spoken! Selected {selectedId.DisplayName}!");
 
                 if (selectedId.DisplayName != null)
                     Game1.addHUDMessage(new HUDMessage(selectedId.DisplayName, null));
             }
-            else
+            else if (Config.ShowDebug())
                 BNC_Core.Logger.Log($"Error: {selectedId} Buff was null");
 
             augvotes.Clear();
@@ -285,7 +306,11 @@ namespace BNC
         public static void Connet()
         {
             BNC_Core.Logger.Log($"{username} Connecting to {channel}");
-            client.Connect();
+            try
+            {
+                client.Connect();
+            }
+            catch (Exception e) { BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed"); }
         }
 
         public static void Disconnect()
@@ -318,12 +343,11 @@ namespace BNC
                 List<MineBuffManager.AugmentOption> keysvalue = new List<MineBuffManager.AugmentOption>(augvotes.Keys);
                 foreach (MineBuffManager.AugmentOption vote in keysvalue)
                 {
-                    BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augvotes[vote]}");
-
                     if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
                     {
                         augvotes[vote]++; ;
-                        BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augvotes[vote]}");
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augvotes[vote]}");
                         usersVoted.Add(e.ChatMessage.UserId);
                         UpdateVotingText();
                     }
@@ -334,12 +358,11 @@ namespace BNC
                 List<BuffManager.BuffOption> keysvalue = new List<BuffManager.BuffOption>(votes.Keys);
                 foreach (BuffManager.BuffOption vote in keysvalue)
                 {
-                    BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
-
                     if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
                     {
-                        votes[vote]++; 
-                        BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
+                        votes[vote]++;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{votes[vote]}");
                         usersVoted.Add(e.ChatMessage.UserId);
                         UpdateVotingText();
                     }
@@ -351,7 +374,8 @@ namespace BNC
                 if (e.ChatMessage.Bits > BNC_Core.config.Bits_To_Mobs_Bit_Amount)
                 {
                     int amount = Math.Max(1, ((int)e.ChatMessage.Bits / BNC_Core.config.Bits_To_Mobs_Bit_Amount));
-                    BNC_Core.Logger.Log($"Try to spawn mob {e.ChatMessage.Bits}");
+                    if (Config.ShowDebug())
+                        BNC_Core.Logger.Log($"Trying to spawn mob {e.ChatMessage.Bits}");
                     TwitchSlime m = new TwitchSlime(Vector2.Zero);
                     m.Name = e.ChatMessage.Username;
                     Spawner.addMonsterToSpawn(m);
@@ -361,9 +385,10 @@ namespace BNC
 
         private static void OnConnected(object sender, OnConnectedArgs e)
         {
-            BNC_Core.Logger.Log($"{username}(Buff Me Bot) has connected to Twitch channel : {channel}");
-            if (!BNC_Core.DebugMode)
-                client.SendMessage(channel, "Buff Me Bot has connected to channel!!!");
+            BNC_Core.Logger.Log($"{username} (BNC Bot) has connected to Twitch channel : {channel}");
+
+            if(Config.ShowDebug())
+                sendMessage("Blessings and Curses initialized a connection to Twitch!!!");
         }
 
         private static void OnDisconnect(object sender, OnDisconnectedEventArgs e)
