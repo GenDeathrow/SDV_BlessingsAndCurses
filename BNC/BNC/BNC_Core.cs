@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using System;
+using static BNC.Spawner;
 
 namespace BNC
 {
@@ -50,9 +51,14 @@ namespace BNC
             if (e.Button.Equals(SButton.K)) {
                 for (int i = 0; i < 3; i++)
                 {
-                    TwitchSlime m = new TwitchSlime(Vector2.Zero);
-                    m.Name = "test name"+ (i > 0 ? "'s minion" : "");
-                    Spawner.addMonsterToSpawn(m);
+
+                    Array values = Enum.GetValues(typeof(TwitchMobType));
+                    Random random = new Random();
+                    TwitchMobType randomType = (TwitchMobType)values.GetValue(random.Next(values.Length));
+
+
+                    string name = "test name"+ (i > 0 ? "'s minion" : "");
+                    Spawner.AddMonsterToSpawnFromType(randomType, name);
 
 
 
@@ -88,10 +94,11 @@ namespace BNC
             BNCSave.SaveModData(helper);
         }
 
-
+        static bool flag = false; 
         private void NewDayEvent(object sender, EventArgs e) {
             if (!Context.IsWorldReady)
                 return;
+
 
             if (BNC_Core.config.Random_Day_Buffs)
                 BuffManager.UpdateDay();

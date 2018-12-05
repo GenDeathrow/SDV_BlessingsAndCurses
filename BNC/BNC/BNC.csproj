@@ -67,8 +67,14 @@
     <Compile Include="Managers\BuffManager.cs" />
     <Compile Include="BNC_Core.cs" />
     <Compile Include="Managers\MineBuffManager.cs" />
-    <Compile Include="Twitch\TwitchJunimo.cs" />
-    <Compile Include="Twitch\TwitchSlime.cs" />
+    <Compile Include="Twitch\ITwitchMonster.cs" />
+    <Compile Include="Twitch\Monsters\TwitchBats.cs" />
+    <Compile Include="Twitch\Monsters\TwitchBug.cs" />
+    <Compile Include="Twitch\Monsters\TwitchCrab.cs" />
+    <Compile Include="Twitch\Monsters\TwitchFly.cs" />
+    <Compile Include="Twitch\Monsters\TwitchJunimo.cs" />
+    <Compile Include="Twitch\Monsters\TwitchBigSlime.cs" />
+    <Compile Include="Twitch\Monsters\TwitchSlime.cs" />
     <Compile Include="Configs\Config.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Configs\SaveFile.cs" />

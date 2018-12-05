@@ -12,6 +12,7 @@ using StardewValley.Menus;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI.Events;
 using BNC.Configs;
+using static BNC.Spawner;
 
 namespace BNC
 {
@@ -76,11 +77,14 @@ namespace BNC
             client.OnNewSubscriber += OnNewSubscriber;
             client.OnConnectionError += OnConnectionError;
             client.OnError += OnError;
+            client.OnGiftedSubscription += OnGifted;
+            client.OnReSubscriber += OnReSubscriber;
             GraphicsEvents.OnPostRenderHudEvent += new EventHandler(GraphicsEvents_OnPostRenderHudEvent);
             timer.Interval = 1000;
             timer.Elapsed += onTimertick;
             Connet();
         }
+
 
         private static void OnError(object sender, OnErrorEventArgs e)
         {
@@ -161,7 +165,7 @@ namespace BNC
         {
             try
             {
-                client.SendMessage(channel, msg);
+                //client.SendMessage(channel, msg);
                 return true;
             }
             catch(Exception e)
@@ -310,7 +314,7 @@ namespace BNC
             {
                 client.Connect();
             }
-            catch (Exception e) { BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed"); }
+            catch (Exception e) { BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed {e}"); }
         }
 
         public static void Disconnect()
@@ -324,11 +328,35 @@ namespace BNC
             if (!Context.IsWorldReady)
                 return;
 
-            TwitchJunimo j = new TwitchJunimo(Vector2.Zero);
-            j.Name = e.Subscriber.DisplayName;
-            Spawner.addSubToSpawn(j);
+            Spawner.SpawnTwitchJunimo(e.Subscriber.DisplayName);
+
+
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log("Attemting to spawn Junimo from resub");
         }
 
+
+        private static void OnGifted(object sender, OnGiftedSubscriptionArgs e)
+        {
+            if (!Context.IsWorldReady)
+                return;
+
+            Spawner.AddMonsterToSpawnFromType(TwitchMobType.Slime, e.GiftedSubscription.MsgParamRecipientUserName);
+
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log("Attemting to spawn Slime from giftsub");
+        }
+
+
+        private static void OnReSubscriber(object sender, OnReSubscriberArgs e)
+        {
+            if (!Context.IsWorldReady)
+                return;
+            Spawner.SpawnTwitchJunimo(e.ReSubscriber.DisplayName);
+
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log("Attemting to spawn Junimo from resub");
+        }
 
         private static int BitCount = 0;
         private static List<String> mobNames = new List<String>();
@@ -345,7 +373,7 @@ namespace BNC
                 {
                     if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
                     {
-                        augvotes[vote]++; ;
+                        augvotes[vote]++; 
                         if (Config.ShowDebug())
                             BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augvotes[vote]}");
                         usersVoted.Add(e.ChatMessage.UserId);
@@ -371,15 +399,35 @@ namespace BNC
             else if (BNC_Core.config.Use_Bits_To_Spawn_Mobs && e.ChatMessage.Bits > 0)
             {
                 BitCount += e.ChatMessage.Bits;
-                if (e.ChatMessage.Bits > BNC_Core.config.Bits_To_Mobs_Bit_Amount)
+
+
+                TwitchMobType? type = (TwitchMobType)Spawner.GetMonsterFromBits(e.ChatMessage.Bits);
+
+                if(type != null)
                 {
-                    int amount = Math.Max(1, ((int)e.ChatMessage.Bits / BNC_Core.config.Bits_To_Mobs_Bit_Amount));
                     if (Config.ShowDebug())
-                        BNC_Core.Logger.Log($"Trying to spawn mob {e.ChatMessage.Bits}");
-                    TwitchSlime m = new TwitchSlime(Vector2.Zero);
-                    m.Name = e.ChatMessage.Username;
-                    Spawner.addMonsterToSpawn(m);
+                        BNC_Core.Logger.Log($"Trying to spawn {type.ToString()} with {e.ChatMessage.Bits}bits");
+                    Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, e.ChatMessage.Username);
                 }
+                else if(Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Failed to spawn monster with {e.ChatMessage.Bits}bits");
+
+                /*
+                if (e.ChatMessage.Bits >= BNC_Core.config.Bits_To_Spawn_Big_Slimes)
+                {
+                    if (Config.ShowDebug())
+                        BNC_Core.Logger.Log($"Trying to spawn large slime with {e.ChatMessage.Bits}");
+
+                    Spawner.SpawnTwitchSlime(e.ChatMessage.Username, true);
+                }
+                else if (e.ChatMessage.Bits >= BNC_Core.config.Bits_To_Spawn_Slimes)
+                {
+                    int amount = Math.Max(1, ((int)e.ChatMessage.Bits / BNC_Core.config.Bits_To_Spawn_Slimes));
+                    if (Config.ShowDebug())
+                        BNC_Core.Logger.Log($"Trying to spawn slime with {e.ChatMessage.Bits}");
+                    Spawner.SpawnTwitchSlime(e.ChatMessage.Username, true);
+                }
+                */
             }
         }
 
@@ -390,6 +438,8 @@ namespace BNC
             if(Config.ShowDebug())
                 sendMessage("Blessings and Curses initialized a connection to Twitch!!!");
         }
+
+
 
         private static void OnDisconnect(object sender, OnDisconnectedEventArgs e)
         {

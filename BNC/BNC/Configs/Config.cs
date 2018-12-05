@@ -11,9 +11,21 @@ namespace BNC.Configs
 
         public bool Use_Bits_To_Spawn_Mobs { get; set; } = true;
 
-        public int Bits_To_Mobs_Bit_Amount { get; set; } = 100;
+        public int[] Bits_To_Spawn_Slimes_Range { get; set; } = new int[] {50,99};
+
+        public int[] Bits_To_Spawn_Bugs_Range { get; set; } = new int[] { 100, 199 };
+
+        public int[] Bits_To_Spawn_Crabs_Range { get; set; } = new int[] { 200, 299 };
+
+        public int[] Bits_To_Spawn_Fly_Range { get; set; } = new int[] { 300, 399 };
+
+        public int[] Bits_To_Spawn_Bat_Range { get; set; } = new int[] { 400, 499 };
+
+        public int[] Bits_To_Spawn_Big_Slimes_Range { get; set; } = new int[] { 500 };
 
         public bool Spawn_Subscriber_Junimo { get; set; } = true;
+
+        public bool Spawn_GiftSub_Subscriber_Mobs { get; set; } = true;
 
         public int Mine_Augment_Every_x_Levels { get; set; } = 5;
 
@@ -42,6 +54,8 @@ namespace BNC.Configs
         {
             return BNC_Core.config.Show_Debug_Text;
         }
+
+
 
     }
 }
