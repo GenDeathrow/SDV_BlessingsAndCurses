@@ -1,16 +1,17 @@
 ﻿using Microsoft.Xna.Framework;
+using StardewValley;
 using StardewValley.Monsters;
+using System.Xml.Serialization;
 
 namespace BNC.Twitch
 {
     class TwitchBat : Bat, ITwitchMonster
     {
-        public TwitchBat(Vector2 position) : base(position)
+        public TwitchBat(Vector2 position, int mineLevel) : base(position, mineLevel)
         {
-            this.Health = health / 2;
-            this.MaxHealth = maxHealth / 2;
         }
 
+        [XmlIgnore]
         public string TwitchName { get; set; } = "null";
 
         public string GetTwitchName()

@@ -1,25 +1,22 @@
 ﻿using System;
-using System.Collections;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Characters;
 using StardewValley.Monsters;
-using System.Linq;
 using BNC.Twitch;
 using System.Collections.Generic;
-using StardewValley.TerrainFeatures;
 using BNC.Configs;
+using System.Linq;
+using StardewValley.Objects;
 
 namespace BNC
 {
     public class Spawner
     {
         private static Dictionary<NPC, string> SpawnList_AroundPlayer = new Dictionary<NPC, string>();
-        private static Dictionary<string,NPC> MobsSpawned = new Dictionary<string, NPC>();
-
-        private static object minelvl;
+        private static List<ITwitchMonster> MobsSpawned = new List<ITwitchMonster>();
 
         public static void Init()
         {
@@ -30,39 +27,32 @@ namespace BNC
 
         public static void UpdateTick()
         {
-
-            foreach (string name in MobsSpawned.Keys.ToArray())
-            {
-                bool flagRmv = false;
-                NPC npc = MobsSpawned[name];
-                if (npc == null)
-                    flagRmv = true;
-                else if (!Game1.player.currentLocation.characters.Contains(npc))
-                    flagRmv = true;
-                else if (npc is Monster && ((Monster)npc).Health <= 0)
-                    flagRmv = true;
-
-                if (flagRmv)
-                    MobsSpawned.Remove(name);
-            }
-
             if (!Context.CanPlayerMove || Game1.CurrentEvent != null || Game1.isFestival() || Game1.weddingToday)
                 return;
-            if (SpawnList_AroundPlayer.Count > 0)
-            {
 
-               bool flag = false;
-                NPC npc = SpawnList_AroundPlayer.Keys.ElementAt(0);
-                if (npc is Monster)
-                    flag = tryToSpawnNPC(npc, SpawnList_AroundPlayer.Values.ElementAt(0), getRangeFromPlayer(10,4));
-                else if (npc is Junimo)
+            // Spawns Up to three per tick
+            for (int i = 0; i < 3; i++) {
+                if (SpawnList_AroundPlayer.Count > 0 && canSpawn())
                 {
-                    Junimo j = (Junimo)npc;
-                    j.stayPut.Value = false;
-                    flag = tryToSpawnNPC(j, SpawnList_AroundPlayer.Values.ElementAt(0), getRangeFromPlayer(8));
-                }
 
-                if (flag) SpawnList_AroundPlayer.Remove(SpawnList_AroundPlayer.Keys.ElementAt(0));
+                    bool flag = false;
+                    NPC npc = SpawnList_AroundPlayer.Keys.ElementAt(0);
+                    if (npc is Monster)
+                    {
+                        Monster m = (Monster)npc;
+                        flag = tryToSpawnNPC(npc, SpawnList_AroundPlayer.Values.ElementAt(0), getRangeFromPlayer(10, 4));
+                    }
+                    else if (npc is Junimo)
+                    {
+                        Junimo j = (Junimo)npc;
+                        j.stayPut.Value = false;
+                        flag = tryToSpawnNPC(j, SpawnList_AroundPlayer.Values.ElementAt(0), getRangeFromPlayer(8));
+                    }
+
+                    if (flag) SpawnList_AroundPlayer.Remove(SpawnList_AroundPlayer.Keys.ElementAt(0));
+                }
+                else
+                    break;
             }
         }
 
@@ -80,27 +70,47 @@ namespace BNC
                 vector.X = xStart + Game1.random.Next(range * 2 + 2);
                 vector.Y = yStart + Game1.random.Next(range * 2 + 2);
             }
-
-
-
             return vector;
         }
+
         public static bool canSpawn()
         {
-            if (Game1.player.currentLocation.Name.Equals("Hospital"))
+            if (Game1.player.currentLocation.Name.Equals("Hospital") || Game1.player.currentLocation.Name.Equals("FarmHouse"))
                 return false;
             else
                 return true;
         }
 
-        public static void UpdateDifficulty()
+        public static Monster UpdateDifficulty(Monster m)
         {
-            minelvl = Game1.player.deepestMineLevel;
+            int minelvl = Game1.player.deepestMineLevel;
+            WorldDate date = Game1.Date;
+            bool beforeSword = date.DayOfMonth < 5 && date.Year == 1 && date.SeasonIndex == 1;
+
+            if(beforeSword)
+            {
+                m.MaxHealth = m.MaxHealth / 4; ;
+                m.Health = m.MaxHealth;
+                m.DamageToFarmer = m.DamageToFarmer / 3;
+            }
+
+            if(minelvl <= 10)
+            {
+                m.MaxHealth = m.MaxHealth / 2;
+                m.Health = m.MaxHealth;
+                m.DamageToFarmer = m.DamageToFarmer / 2;
+            }
+
+            if (m.DamageToFarmer <= 0) m.DamageToFarmer = 1;
+            if (m.MaxHealth <= 0) m.MaxHealth = 1;
+            if (m.Health <= 0) m.Health = 1;
+
+            return m;
         }
 
         public static void addMonsterToSpawn(Monster m, string username)
-        { 
-            SpawnList_AroundPlayer.Add(m, username);
+        {
+           SpawnList_AroundPlayer.Add(UpdateDifficulty(m), username);
         }
 
         public static void addSubToSpawn(NPC sub, string username)
@@ -110,6 +120,8 @@ namespace BNC
 
         public static void SpawnTwitchJunimo(string name)
         {
+            if (!BNC_Core.config.Spawn_Subscriber_Junimo)
+                return;
             Junimo j = new TwitchJunimo(Vector2.Zero);
             Spawner.addSubToSpawn(j, name);
         }
@@ -117,41 +129,28 @@ namespace BNC
         private static bool tryToSpawnNPC(NPC m, string username, Vector2 pos)
         {
             if (!canSpawn() || pos.Equals(Game1.player.getTileLocation()) || !Game1.currentLocation.isTileLocationTotallyClearAndPlaceable(pos) || Game1.player.currentLocation.isTileOccupied(pos, ""))
-               return false;
+            {
+                if(Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Faild to spawn {m.displayName}:{username} at Tile:{pos.X},{pos.Y} Adding Back into Queue");
+                return false;
+            }
 
             ((ITwitchMonster)m).setTwitchName(username);
 
             m.setTilePosition((int)pos.X, (int)pos.Y);
-            Game1.player.currentLocation.characters.Add((NPC)m);
-            MobsSpawned.Add(username, m);
+            Game1.player.currentLocation.characters.Add((NPC) m);
+            MobsSpawned.Add((ITwitchMonster)m);
+
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Spawning {m.displayName}:{username} at Tile:{pos.X},{pos.Y}..");
             if (m is GreenSlime)
                 Game1.player.currentLocation.playSoundAt("slime", pos);
 
             return true;
         }
- 
-        //## Client Rendering
-        private static void OnPostRender(object sender, EventArgs e)
-        {
-            if (Game1.currentLocation != null && Game1.activeClickableMenu == null && Game1.CurrentEvent == null)
-            {
-
-                //                foreach (string name in MobsSpawned.Keys) Tried something different
-                foreach (NPC npc in Game1.currentLocation.getCharacters())
-                {
-                    if (npc is ITwitchMonster)
-                    {
-                        int localX = npc.GetBoundingBox().Center.X - Game1.viewport.X - ((int)Game1.smallFont.MeasureString(((ITwitchMonster)npc).GetTwitchName()).Length() / 2);
-                        int localY = npc.GetBoundingBox().Y - Game1.viewport.Y - (npc is Monster ? 60 : 30);
-                        Utility.drawTextWithColoredShadow(Game1.spriteBatch, $"{((ITwitchMonster)npc).GetTwitchName()}", Game1.smallFont, new Vector2(localX, localY), Color.Wheat, Color.Black);
-                    }
-                }
-            }
-        }
 
         public static void ClearMobs()
         {
-
             foreach (StardewValley.GameLocation location in StardewValley.Game1.locations.ToArray())
             {
                 foreach (NPC mob in location.characters.ToArray())
@@ -162,61 +161,54 @@ namespace BNC
                     }
                 }
             }
-
             MobsSpawned.Clear();
         }
 
         public static void SpawnTwitchNPC(string username, Monster mob)
         {
-           // mob.Name = username;
             addMonsterToSpawn(mob, username);
         }
 
-        public static void AddMonsterToSpawnFromType(TwitchMobType type, string name)
+        public static void AddMonsterToSpawnFromType(TwitchMobType type, string name, bool tiny = false)
         {
             switch (type)
             {
 
                 case TwitchMobType.Slime:
-                    SpawnTwitchNPC(name, new TwitchSlime(Vector2.Zero));
+                    TwitchSlime slime = new TwitchSlime(Vector2.Zero, Game1.player.deepestMineLevel);
+                    if (tiny)
+                    {
+                        slime.willDestroyObjectsUnderfoot = false;
+                        slime.moveTowardPlayer(4);
+                        slime.Scale = (float)(0.50 + (double)Game1.random.Next(-5, 10) / 100.0);
+                        slime.MaxHealth = slime.MaxHealth / 4;
+                        slime.Health = slime.MaxHealth;
+                    }
+                    SpawnTwitchNPC(name, slime);
                     break;
                 case TwitchMobType.Crab:
                     SpawnTwitchNPC(name, new TwitchCrab(Vector2.Zero));
                     break;
                 case TwitchMobType.Bug:
-                    SpawnTwitchNPC(name, new TwitchBug(Vector2.Zero));
+                    TwitchBug bug = new TwitchBug(Vector2.Zero, -1);
+                    bug.faceDirection(Game1.random.Next(4));
+                    SpawnTwitchNPC(name, bug);
                     break;
                 case TwitchMobType.Fly:
-                    SpawnTwitchNPC(name, new TwitchFly(Vector2.Zero));
+                    TwitchFly fly = new TwitchFly(Vector2.Zero, false);
+                    fly.wildernessFarmMonster = true;
+                    fly.focusedOnFarmers = true;
+                    SpawnTwitchNPC(name, fly);
                     break;
                 case TwitchMobType.Bat:
-                    SpawnTwitchNPC(name, new TwitchBat(Vector2.Zero));
+                    TwitchBat bat = SpecialBatSpawn();
+                    bat.wildernessFarmMonster = true;
+                    bat.focusedOnFarmers = true;
+                    SpawnTwitchNPC(name, bat);
                     break;
                 case TwitchMobType.BigSlime:
                     SpawnTwitchNPC(name, new TwitchBigSlime(Vector2.Zero));
                     break;
-
-
-                    /* Tried vanilla mobs didn't work
-                    case TwitchMobType.Slime:
-                        SpawnTwitchNPC(name, new GreenSlime(Vector2.Zero));
-                        break;
-                    case TwitchMobType.Crab:
-                        SpawnTwitchNPC(name, new RockCrab(Vector2.Zero));
-                        break;
-                    case TwitchMobType.Bug:
-                        SpawnTwitchNPC(name, new Bug(Vector2.Zero, 0));
-                        break;
-                    case TwitchMobType.Fly:
-                        SpawnTwitchNPC(name, new Fly(Vector2.Zero));
-                        break;
-                    case TwitchMobType.Bat:
-                        SpawnTwitchNPC(name, new Bat(Vector2.Zero));
-                        break;
-                    case TwitchMobType.BigSlime:
-                        SpawnTwitchNPC(name, new BigSlime(Vector2.Zero, 0));
-                        break;
-                        */
             }
         }
 
@@ -242,70 +234,96 @@ namespace BNC
 
         public static TwitchMobType? GetMonsterFromBits(int bit)
         {
+            TwitchMobType? TypeReturn = null;
+
             foreach (TwitchMobType type in Enum.GetValues(typeof(TwitchMobType)))
             {
                 if (!IsMonsterEnabled(type))
                     continue;
-                BNC_Core.Logger.Log($"bits {bit}");
+
                 int[] range;
                 switch (type)
                 {
                     case TwitchMobType.Slime:
                         range = GetBitRangeFromMonster(TwitchMobType.Slime);
-                        if (Enumerable.Range(range[0], range[1]).Contains(bit))
-                            return TwitchMobType.Slime;
+                        if (bit >= range[0] && bit <= range[1])
+                            TypeReturn = TwitchMobType.Slime;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"{type.ToString()}: Are bits({bit}) between {range[0]} & {range[1]}? {bit >= range[0] && bit <= range[1]}");
                         break;
                     case TwitchMobType.Crab:
                         range = GetBitRangeFromMonster(TwitchMobType.Crab);
-                        if (Enumerable.Range(range[0], range[1]).Contains(bit))
-                            return TwitchMobType.Crab;
+                        if (bit >= range[0] && bit <= range[1])
+                            TypeReturn = TwitchMobType.Crab;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"{type.ToString()}: Are bits({bit}) between {range[0]} & {range[1]}? {bit >= range[0] && bit <= range[1]}");
                         break;
                     case TwitchMobType.Bug:
                         range = GetBitRangeFromMonster(TwitchMobType.Bug);
-                        if (Enumerable.Range(range[0], range[1]).Contains(bit))
-                            return TwitchMobType.Bug;
+                        if (bit >= range[0] && bit <= range[1])
+                            TypeReturn = TwitchMobType.Bug;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"{type.ToString()}: Are bits({bit}) between {range[0]} & {range[1]}? {bit >= range[0] && bit <= range[1]}");
                         break;
                     case TwitchMobType.Fly:
                         range = GetBitRangeFromMonster(TwitchMobType.Fly);
-                        if (Enumerable.Range(range[0], range[1]).Contains(bit))
-                            return TwitchMobType.Fly;
+                        if (bit >= range[0] && bit <= range[1])
+                            TypeReturn = TwitchMobType.Fly;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"{type.ToString()}: Are bits({bit}) between {range[0]} & {range[1]}? {bit >= range[0] && bit <= range[1]}");
                         break;
                     case TwitchMobType.Bat:
                         range = GetBitRangeFromMonster(TwitchMobType.Bat);
-                        if (Enumerable.Range(range[0], range[1]).Contains(bit))
-                            return TwitchMobType.Bat;
+                        if (bit >= range[0] && bit <= range[1])
+                            TypeReturn = TwitchMobType.Bat;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"{type.ToString()}: Are bits({bit}) between {range[0]} & {range[1]}? {bit >= range[0] && bit <= range[1]}");
                         break;
                     case TwitchMobType.BigSlime:
                         range = GetBitRangeFromMonster(TwitchMobType.BigSlime);
-                        if (Enumerable.Range(range[0], range[1]).Contains(bit))
-                            return TwitchMobType.BigSlime;
+                        if (bit >= range[0] && bit <= range[1])
+                            TypeReturn = TwitchMobType.BigSlime;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"{type.ToString()}: Are bits({bit}) between {range[0]} & {range[1]}? {bit >= range[0] && bit <= range[1]}");
                         break;
                     default:
+                        range = new int[] { -1, -1 };
                         break;
                 }
             }
-            return null;
+            return TypeReturn;  
         }
 
 
         private static int[] GetBitRangeFromMonster(TwitchMobType type)
         {
+            int[] ranges = new int[]{ -1, -2 };
             switch (type)
             {
                 case TwitchMobType.Slime:
-                    return CalculateRanges(BNC_Core.config.Bits_To_Spawn_Slimes_Range);
+                    ranges = CalculateRanges(BNC_Core.config.Bits_To_Spawn_Slimes_Range);
+                    break;
                 case TwitchMobType.Crab:
-                    return CalculateRanges(BNC_Core.config.Bits_To_Spawn_Crabs_Range);
+                    ranges = CalculateRanges(BNC_Core.config.Bits_To_Spawn_Crabs_Range);
+                    break;
                 case TwitchMobType.Bug:
-                    return CalculateRanges(BNC_Core.config.Bits_To_Spawn_Bugs_Range);
+                    ranges = CalculateRanges(BNC_Core.config.Bits_To_Spawn_Bugs_Range);
+                    break;
                 case TwitchMobType.Fly:
-                    return CalculateRanges(BNC_Core.config.Bits_To_Spawn_Fly_Range);
+                    ranges = CalculateRanges(BNC_Core.config.Bits_To_Spawn_Fly_Range);
+                    break;
                 case TwitchMobType.Bat:
-                    return CalculateRanges(BNC_Core.config.Bits_To_Spawn_Bat_Range);
+                    ranges = CalculateRanges(BNC_Core.config.Bits_To_Spawn_Bat_Range);
+                    break;
                 case TwitchMobType.BigSlime:
-                    return CalculateRanges(BNC_Core.config.Bits_To_Spawn_Big_Slimes_Range);
+                    ranges = CalculateRanges(BNC_Core.config.Bits_To_Spawn_Big_Slimes_Range);
+                    break;
+                default:
+                    ranges = new int[] { -1, -2 };
+                    break;
+
             }
-            return new int[] { -1, -2 };
+            return ranges;
         }
 
         private static int[] CalculateRanges(int[] ranges)
@@ -314,20 +332,64 @@ namespace BNC
             {
                 int min = Math.Min(ranges[0], ranges[1]);
                 int max = Math.Max(ranges[0], ranges[1]);
-                int count = max - min;
-
-                if (Config.ShowDebug())
-                    BNC_Core.Logger.Log($"min{min} / max{max} - cnt{count}");
-                return new int[] { min, count };
+                return new int[] { min, max };
             }
             else if (ranges.Length == 1)
             {
-                int count = int.MaxValue - ranges[0];
-                return new int[] { ranges[0], count };
+                return new int[] { ranges[0], int.MaxValue };
             }
             return new int[] { -100, -200 };
         }
 
+        private static TwitchBat SpecialBatSpawn()
+        {
+            TwitchBat bat = new TwitchBat(Vector2.Zero, 1); ;
+
+            if (Game1.player.CombatLevel >= 10 && Game1.random.NextDouble() < 0.25)
+            {
+                bat = new TwitchBat(Vector2.Zero, 9999);
+                bat.focusedOnFarmers = true;
+                bat.wildernessFarmMonster = true;
+            }
+            else if (Game1.player.CombatLevel >= 8 && Game1.random.NextDouble() < 0.5)
+            {
+                bat = new TwitchBat(Vector2.Zero, 81);
+                bat.focusedOnFarmers = true;
+                bat.wildernessFarmMonster = true;
+            }
+            else if (Game1.player.CombatLevel >= 5 && Game1.random.NextDouble() < 0.5)
+            {
+                bat = new TwitchBat(Vector2.Zero, 41);
+                bat.focusedOnFarmers = true;
+                bat.wildernessFarmMonster = true;
+            }
+            else
+            {
+                bat = new TwitchBat(Vector2.Zero, 1);
+                bat.focusedOnFarmers = true;
+                bat.wildernessFarmMonster = true;
+            }
+            return bat;
+        }
+
+        //## Client Rendering Code for Twitch Name over twitch mobs. 
+        private static void OnPostRender(object sender, EventArgs e)
+        {
+            if (Game1.currentLocation != null && Game1.activeClickableMenu == null && Game1.CurrentEvent == null)
+            {
+
+                //                foreach (string name in MobsSpawned.Keys) Tried something different
+                foreach (NPC npc in Game1.currentLocation.getCharacters())
+                {
+                    if (npc is ITwitchMonster)
+                    {
+                        int localX = npc.GetBoundingBox().Center.X - Game1.viewport.X - ((int)Game1.smallFont.MeasureString(((ITwitchMonster)npc).GetTwitchName()).Length() / 2);
+                        int localY = npc.GetBoundingBox().Y - Game1.viewport.Y - (npc is Monster ? 60 : 30);
+                        Utility.drawTextWithColoredShadow(Game1.spriteBatch, $"{((ITwitchMonster)npc).GetTwitchName()}", Game1.smallFont, new Vector2(localX, localY), Color.Wheat, Color.Black);
+                    }
+                }
+            }
+        }
 
         public enum TwitchMobType   { Slime, Crab, Bug, Fly, Bat, BigSlime }
     }

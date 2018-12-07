@@ -1,5 +1,4 @@
-﻿
-namespace BNC.Twitch
+﻿namespace BNC.Twitch
 {
     interface ITwitchMonster
     {

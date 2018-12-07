@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using StardewValley.Monsters;
+using System.Xml.Serialization;
 
 namespace BNC.Twitch
 {
@@ -7,10 +8,8 @@ namespace BNC.Twitch
     {
         public TwitchCrab(Vector2 position) : base(position)
         {
-            this.Health = health / 2;
-            this.MaxHealth = maxHealth / 2;
         }
-
+        [XmlIgnore]
         public string TwitchName { get; set; } = "null";
 
         public string GetTwitchName()

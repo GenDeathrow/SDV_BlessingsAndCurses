@@ -1,16 +1,16 @@
 ﻿using Microsoft.Xna.Framework;
 using StardewValley.Monsters;
+using System.Xml.Serialization;
 
 namespace BNC.Twitch
 {
     class TwitchFly : Fly, ITwitchMonster
     {
-        public TwitchFly(Vector2 position) : base(position)
+        public TwitchFly(Vector2 position, bool hard) : base(position, hard)
         {
-            this.Health = health / 2;
-            this.MaxHealth = maxHealth / 2;
         }
 
+        [XmlIgnore]
         public string TwitchName { get; set; } = "null";
 
         public string GetTwitchName()

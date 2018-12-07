@@ -41,23 +41,22 @@ namespace BNC
             MineBuffManager.Init();
             Spawner.Init();
 
-            //if(DebugMode)
+            //////if(DebugMode)
                 //InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
         }
         
         Spawner spawner = new Spawner();
         private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
         {
-            if (e.Button.Equals(SButton.K)) {
-                for (int i = 0; i < 3; i++)
-                {
-
-                    Array values = Enum.GetValues(typeof(TwitchMobType));
+            this.Monitor.Log(e.Button.ToString());
+            if (e.Button.Equals(SButton.B)) {
+                this.Monitor.Log("B was pressed");
+                Array values = Enum.GetValues(typeof(TwitchMobType));
                     Random random = new Random();
                     TwitchMobType randomType = (TwitchMobType)values.GetValue(random.Next(values.Length));
 
 
-                    string name = "test name"+ (i > 0 ? "'s minion" : "");
+                    string name = "test name"+ random.Next();
                     Spawner.AddMonsterToSpawnFromType(randomType, name);
 
 
@@ -66,7 +65,6 @@ namespace BNC
                     //j.Name = "test name" + (i > 0 ? "'s npc" : "");
                     //j.collidesWithOtherCharacters.Value = false;
                     //Spawner.addSubToSpawn(j);
-                }
             }
         }
 

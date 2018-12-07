@@ -33,6 +33,12 @@ namespace BNC.Configs
 
         public bool Show_Debug_Text { get; set; } = false;
 
+        public bool Use_Chat_Command_Debugging { get; set; } = false;
+
+        public bool Moderators_Can_Only_Use_Chat_Commands { get; set; } = false;
+
+        public string _Comment { get; set; } = "To list all the commands type '$help' into the twitch chat.";
+
 
         public static int[] getBuffMinMax()
         {
@@ -55,7 +61,10 @@ namespace BNC.Configs
             return BNC_Core.config.Show_Debug_Text;
         }
 
-
+        public static bool IsDebugMode()
+        {
+            return BNC_Core.config.Use_Chat_Command_Debugging;
+        }
 
     }
 }

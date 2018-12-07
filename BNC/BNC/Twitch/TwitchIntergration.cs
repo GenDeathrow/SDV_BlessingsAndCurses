@@ -13,6 +13,8 @@ using Microsoft.Xna.Framework;
 using StardewModdingAPI.Events;
 using BNC.Configs;
 using static BNC.Spawner;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace BNC
 {
@@ -20,9 +22,9 @@ namespace BNC
     {
         private static TwitchClient client;
         private static ConnectionCredentials credentials;
-        private static String username;
-        private static String token;
-        private static String channel;
+        private static String TwitchUsername;
+        private static String TwitchToken;
+        private static String TwitchChannel;
 
         public static bool hasPollStarted;
         public static Timer timer = new Timer();
@@ -54,23 +56,23 @@ namespace BNC
             else
                 twitchSettings = helper.Data.ReadJsonFile<TwitchSecret>(fileName);
 
-            username = twitchSettings.Twitch_User_Name;
-            token = twitchSettings.OAuth_Token;
-            channel = twitchSettings.Twitch_Channel_Name;
+            TwitchUsername = twitchSettings.Twitch_User_Name;
+            TwitchToken = twitchSettings.OAuth_Token;
+            TwitchChannel = twitchSettings.Twitch_Channel_Name;
             TwitchInit(helper);
         }
 
 
         public static void TwitchInit(IModHelper helper)
         {
-            if (username == null || token == null || channel == null)
+            if (TwitchUsername == null || TwitchToken == null || TwitchChannel == null)
             {
-                BNC_Core.Logger.Log($"Tried to initialize twitch but failed. username:{username == null} || token:{token == null} || channel:{channel == null}");
+                BNC_Core.Logger.Log($"Tried to initialize twitch integration but failed. Is Null? username:{TwitchUsername == null} || token:{TwitchToken == null} || channel:{TwitchChannel == null}");
                 return;
             }
-            credentials = new ConnectionCredentials(username, token);
+            credentials = new ConnectionCredentials(TwitchUsername, TwitchToken);
             client = new TwitchClient();
-            client.Initialize(credentials, channel);
+            client.Initialize(credentials, TwitchChannel);
             client.OnConnected += OnConnected;
             client.OnDisconnected += OnDisconnect;
             client.OnMessageReceived += OnMessageReceived;
@@ -146,7 +148,7 @@ namespace BNC
         {
             if (reconnectTrys >= 4)
                 return;
-            BNC_Core.Logger.Log($"Attempting to reconnect to the channel {channel}...");
+            BNC_Core.Logger.Log($"Attempting to reconnect to the Channel:{TwitchChannel}...");
 
             if (reconnectTrys++ < 4)
             {
@@ -157,7 +159,7 @@ namespace BNC
                     if (msg != null) sendMessage(msg);
                 }
                 else
-                    BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed");
+                    BNC_Core.Logger.Log($"Attempted to connect to Channel:{TwitchChannel}, But failed");
             }
         }
 
@@ -165,13 +167,13 @@ namespace BNC
         {
             try
             {
-                //client.SendMessage(channel, msg);
+                client.SendMessage(TwitchChannel, msg);
                 return true;
             }
             catch(Exception e)
             {
                 attemptReconnect();
-                BNC_Core.Logger.Log("Faild to send message to Twitch! >>> "+ e);
+                BNC_Core.Logger.Log($"Faild to send message to Twitch Channel {TwitchChannel}! >>> {msg} Error:"+ e);
                 return false;
             }
         }
@@ -309,17 +311,17 @@ namespace BNC
 
         public static void Connet()
         {
-            BNC_Core.Logger.Log($"{username} Connecting to {channel}");
+            BNC_Core.Logger.Log($"{TwitchUsername} has connected to Channel:{TwitchChannel}");
             try
             {
                 client.Connect();
             }
-            catch (Exception e) { BNC_Core.Logger.Log($"Attempted to connect to {channel}, But failed {e}"); }
+            catch (Exception e) { BNC_Core.Logger.Log($"Attempted to connect to {TwitchChannel}, But failed {e}"); }
         }
 
         public static void Disconnect()
         {
-            BNC_Core.Logger.Log($"{username} Disconnecting to {channel}");
+            BNC_Core.Logger.Log($"{TwitchUsername} has disconnected from Channel:{TwitchChannel}");
             client.Disconnect();
         }
 
@@ -327,12 +329,9 @@ namespace BNC
         {
             if (!Context.IsWorldReady)
                 return;
-
             Spawner.SpawnTwitchJunimo(e.Subscriber.DisplayName);
-
-
-            if (Config.ShowDebug())
-                BNC_Core.Logger.Log("Attemting to spawn Junimo from resub");
+            if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
+                BNC_Core.Logger.Log($"Attemting to spawn Junimo:{e.Subscriber.DisplayName} from resub");
         }
 
 
@@ -341,10 +340,11 @@ namespace BNC
             if (!Context.IsWorldReady)
                 return;
 
-            Spawner.AddMonsterToSpawnFromType(TwitchMobType.Slime, e.GiftedSubscription.MsgParamRecipientUserName);
+            if(BNC_Core.config.Spawn_GiftSub_Subscriber_Mobs)
+                Spawner.AddMonsterToSpawnFromType(TwitchMobType.Slime, e.GiftedSubscription.MsgParamRecipientDisplayName, true);
 
             if (Config.ShowDebug())
-                BNC_Core.Logger.Log("Attemting to spawn Slime from giftsub");
+                BNC_Core.Logger.Log($"Adding GiftSub Slime:{e.GiftedSubscription.MsgParamRecipientDisplayName} to queue...");
         }
 
 
@@ -352,19 +352,107 @@ namespace BNC
         {
             if (!Context.IsWorldReady)
                 return;
+
             Spawner.SpawnTwitchJunimo(e.ReSubscriber.DisplayName);
 
-            if (Config.ShowDebug())
-                BNC_Core.Logger.Log("Attemting to spawn Junimo from resub");
+            if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
+                BNC_Core.Logger.Log($"Adding Junimo to queue from resub: {e.ReSubscriber.DisplayName}");
         }
 
         private static int BitCount = 0;
         private static List<String> mobNames = new List<String>();
 
+        private static DateTime lastHelp = DateTime.Now;
+
+        private static void DebugCommands(string msg, string sender)
+        {
+            string[] split = Regex.Split(msg, @"\s+");
+            if (msg.StartsWith("$bits"))
+            {
+                BNC_Core.Logger.Log($"split {split.Length} length");
+                if (split.Length >= 2)
+                {
+                    int bitamt = 0;
+
+                    try
+                    {
+                        bitamt = int.Parse(split[1]);
+                    }
+                    catch{ BNC_Core.Logger.Log($"{split[1]} is not a valid number from {sender}"); }
+
+                    if(bitamt > 0)
+                    {
+                        TwitchMobType? type = (TwitchMobType?)Spawner.GetMonsterFromBits(bitamt);
+
+                        if (type != null)
+                        {
+                            if (Config.ShowDebug())
+                                BNC_Core.Logger.Log($"DEBUGMODE: Adding Monster:{type.ToString()}:{sender} to queue with {bitamt}bits");
+                            Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, sender);
+                        }
+                        else if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"DEBUGMODE: Failed to add monster to queue with {bitamt}bits from {sender}");
+                    }
+
+                }
+            }
+            else if (msg.StartsWith("$sub"))
+            {
+                if (BNC_Core.config.Spawn_Subscriber_Junimo)
+                    Spawner.SpawnTwitchJunimo(sender);
+                else
+                    BNC_Core.Logger.Log($"DEBUGMODE: 'Spawn_Subscriber_Junimo' Config option is turned off for subscribers");
+
+                if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
+                    BNC_Core.Logger.Log($"DEBUGMODE: Adding Junimo:{sender} to queue from a new sub");
+            }
+            else if (msg.StartsWith("$gift"))
+            {
+                if (BNC_Core.config.Spawn_GiftSub_Subscriber_Mobs)
+                    Spawner.AddMonsterToSpawnFromType(TwitchMobType.Slime, sender, true);
+                else
+                    BNC_Core.Logger.Log($"DEBUGMODE: 'Spawn_GiftSub_Subscriber_Mobs' Config option is turned off for gift subs");
+
+                if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"DEBUGMODE: Adding GiftSub Slime:{sender} to queue...");
+
+            }
+            else if (msg.StartsWith("$resub"))
+            {
+                if (BNC_Core.config.Spawn_Subscriber_Junimo)
+                    Spawner.SpawnTwitchJunimo(sender);
+                else
+                    BNC_Core.Logger.Log($"DEBUGMODE: 'Spawn_Subscriber_Junimo' Config option is turned off for subscribers");
+
+                if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
+                    BNC_Core.Logger.Log($"DEBUGMODE: Adding Junimo:{sender} to queue from a new resubs");
+            }else if (msg.StartsWith("$help") && DateTime.Now > lastHelp.AddSeconds(30))
+            {
+                sendMessage("Current Debug Commands: '$bits <amt>', '$gift', '$resub', '$sub'");
+                lastHelp = DateTime.Now;
+            }
+
+        }
+
         private static void OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             if (!Context.IsWorldReady)
                 return;
+
+
+            if (Config.IsDebugMode())
+            {
+                bool flag = false;
+
+                if (BNC_Core.config.Moderators_Can_Only_Use_Chat_Commands && (e.ChatMessage.IsModerator || e.ChatMessage.IsBroadcaster))
+                    flag = true;
+                else if (!BNC_Core.config.Moderators_Can_Only_Use_Chat_Commands)
+                    flag = true;
+
+
+                if(flag)
+                    DebugCommands(e.ChatMessage.Message, e.ChatMessage.DisplayName);
+            }
 
             if (hasMinePollStarted && !usersVoted.Contains(e.ChatMessage.UserId))
             {
@@ -406,11 +494,11 @@ namespace BNC
                 if(type != null)
                 {
                     if (Config.ShowDebug())
-                        BNC_Core.Logger.Log($"Trying to spawn {type.ToString()} with {e.ChatMessage.Bits}bits");
-                    Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, e.ChatMessage.Username);
+                        BNC_Core.Logger.Log($"Adding monster to queue {type.ToString()} with {e.ChatMessage.Bits}bits");
+                    Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, e.ChatMessage.DisplayName);
                 }
                 else if(Config.ShowDebug())
-                    BNC_Core.Logger.Log($"Failed to spawn monster with {e.ChatMessage.Bits}bits");
+                    BNC_Core.Logger.Log($"Failed to add monster to queue with {e.ChatMessage.Bits}bits from {e.ChatMessage.DisplayName}");
 
                 /*
                 if (e.ChatMessage.Bits >= BNC_Core.config.Bits_To_Spawn_Big_Slimes)
@@ -433,17 +521,17 @@ namespace BNC
 
         private static void OnConnected(object sender, OnConnectedArgs e)
         {
-            BNC_Core.Logger.Log($"{username} (BNC Bot) has connected to Twitch channel : {channel}");
+            BNC_Core.Logger.Log($"{TwitchUsername} (BNC Bot) has connected to Twitch channel : {TwitchChannel}");
 
             if(Config.ShowDebug())
-                sendMessage("Blessings and Curses initialized a connection to Twitch!!!");
+                sendMessage("Blessings and Curses has initialized a connection to Twitch!!!");
         }
 
 
 
         private static void OnDisconnect(object sender, OnDisconnectedEventArgs e)
         {
-            BNC_Core.Logger.Log($"{username} has disconnected from Twitch channel : {channel}");
+            BNC_Core.Logger.Log($"{TwitchUsername} has disconnected from Twitch channel : {TwitchChannel}");
             attemptReconnect();
         }
 
