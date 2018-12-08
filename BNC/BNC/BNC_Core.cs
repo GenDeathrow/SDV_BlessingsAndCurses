@@ -1,6 +1,5 @@
-﻿using Bookcase.Events;
-using BNC.Configs;
-using Microsoft.Xna.Framework;
+﻿using BNC.Configs;
+using Bookcase.Events;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using System;
@@ -36,7 +35,6 @@ namespace BNC
             SaveEvents.AfterReturnToTitle += OnReturnToTitle;
             SaveEvents.AfterCreate += OnCreate;
 
-
             BuffManager.Init();
             MineBuffManager.Init();
             Spawner.Init();
@@ -44,7 +42,7 @@ namespace BNC
             //////if(DebugMode)
                 //InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
         }
-        
+
         Spawner spawner = new Spawner();
         private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
         {

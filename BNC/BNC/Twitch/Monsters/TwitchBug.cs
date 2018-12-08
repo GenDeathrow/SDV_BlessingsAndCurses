@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using StardewValley;
 using StardewValley.Monsters;
 using System.Xml.Serialization;
 

@@ -1,15 +1,14 @@
-﻿using System;
+﻿using BNC.Configs;
+using BNC.Twitch;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Characters;
 using StardewValley.Monsters;
-using BNC.Twitch;
+using System;
 using System.Collections.Generic;
-using BNC.Configs;
 using System.Linq;
-using StardewValley.Objects;
 
 namespace BNC
 {
@@ -196,13 +195,11 @@ namespace BNC
                     break;
                 case TwitchMobType.Fly:
                     TwitchFly fly = new TwitchFly(Vector2.Zero, false);
-                    fly.wildernessFarmMonster = true;
                     fly.focusedOnFarmers = true;
                     SpawnTwitchNPC(name, fly);
                     break;
                 case TwitchMobType.Bat:
                     TwitchBat bat = SpecialBatSpawn();
-                    bat.wildernessFarmMonster = true;
                     bat.focusedOnFarmers = true;
                     SpawnTwitchNPC(name, bat);
                     break;

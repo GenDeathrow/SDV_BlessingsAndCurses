@@ -1,20 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Timers;
-using StardewValley;
+﻿using BNC.Configs;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
+using StardewModdingAPI.Events;
+using StardewValley;
+using StardewValley.Menus;
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Timers;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Events;
-using Microsoft.Xna.Framework.Graphics;
-using StardewValley.Menus;
-using Microsoft.Xna.Framework;
-using StardewModdingAPI.Events;
-using BNC.Configs;
 using static BNC.Spawner;
-using System.Text.RegularExpressions;
-using System.Linq;
 
 namespace BNC
 {
@@ -426,9 +425,9 @@ namespace BNC
 
                 if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
                     BNC_Core.Logger.Log($"DEBUGMODE: Adding Junimo:{sender} to queue from a new resubs");
-            }else if (msg.StartsWith("$help") && DateTime.Now > lastHelp.AddSeconds(30))
+            }else if (msg.StartsWith("$help") && DateTime.Now > lastHelp.AddSeconds(15))
             {
-                sendMessage("Current Debug Commands: '$bits <amt>', '$gift', '$resub', '$sub'");
+                sendMessage("Current Debug Commands: '$bits <amt>', '$gift', '$resub', and '$sub'");
                 lastHelp = DateTime.Now;
             }
 
