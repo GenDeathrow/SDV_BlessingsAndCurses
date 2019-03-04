@@ -7,11 +7,13 @@ namespace BNC
 
         public int nextBuffDate { get; set; } = -1;
         public int lastMineBuffLevel { get; set; } = 0;
+        public int currentTwitchBits { get; set; } = 0;
 
         public void clearData()
         {
             nextBuffDate = -1;
             lastMineBuffLevel  = 0;
+            currentTwitchBits = 0;
         }
 
         public void SaveModData(IModHelper helper)

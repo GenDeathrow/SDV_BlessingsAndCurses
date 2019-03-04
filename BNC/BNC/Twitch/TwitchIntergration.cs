@@ -6,6 +6,7 @@ using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Menus;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Timers;
@@ -17,6 +18,7 @@ using static BNC.Spawner;
 
 namespace BNC
 {
+
     class TwitchIntergration
     {
         private static TwitchClient client;
@@ -31,6 +33,7 @@ namespace BNC
         public static List<String> usersVoted = new List<string>();
 
         public static bool hasMinePollStarted;
+
 
 
         public static Dictionary<BuffManager.BuffOption, int> votes;
@@ -164,9 +167,12 @@ namespace BNC
 
         private static bool sendMessage(string msg)
         {
+
             try
             {
                 client.SendMessage(TwitchChannel, msg);
+                if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Sending Message to {TwitchChannel}! >>> {msg}");
                 return true;
             }
             catch(Exception e)
@@ -351,9 +357,7 @@ namespace BNC
         {
             if (!Context.IsWorldReady)
                 return;
-
             Spawner.SpawnTwitchJunimo(e.ReSubscriber.DisplayName);
-
             if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
                 BNC_Core.Logger.Log($"Adding Junimo to queue from resub: {e.ReSubscriber.DisplayName}");
         }
@@ -365,9 +369,47 @@ namespace BNC
 
         private static void DebugCommands(string msg, string sender)
         {
-            string[] split = Regex.Split(msg, @"\s+");
-            if (msg.StartsWith("$bits"))
+            if (msg.ToLower().Contains("$bits"))
             {
+
+                MatchCollection matches = Regex.Matches(msg.ToLower(), "\\$bits([0-9]+)");
+
+                if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"DEBUGMODE: {matches.Count} cheer found from {sender}");
+
+                if (matches.Count > 0)
+                {
+                    int[] list = new int[matches.Count];
+
+                    int i = 0;
+                    int totalBitsCounted = 0;
+                    foreach (Match match in matches)
+                    {
+                        int bitamt = 0;
+                        try
+                        {
+                            bitamt = int.Parse(match.Groups[1].ToString());
+                            list[i++] = bitamt;
+                            totalBitsCounted += bitamt;
+                        }
+                        catch { BNC_Core.Logger.Log($"{match.Groups[1].ToString()} is not a valid number from {sender}"); }
+                    }
+
+                    foreach (int bitamt in list)
+                    {
+                        TwitchMobType? type = (TwitchMobType)Spawner.GetMonsterFromBits(bitamt);
+
+                        if (type != null)
+                        {
+                            if (Config.ShowDebug())
+                                BNC_Core.Logger.Log($"DEBUGMODE: Adding Monster:{type.ToString()}:{sender} to queue with {bitamt}bits");
+                            Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, sender);
+                        }
+                        else if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"DEBUGMODE: Failed to add monster to queue with {bitamt}bits from {sender}");
+                    }
+                }
+                /*
                 BNC_Core.Logger.Log($"split {split.Length} length");
                 if (split.Length >= 2)
                 {
@@ -394,6 +436,7 @@ namespace BNC
                     }
 
                 }
+                */
             }
             else if (msg.StartsWith("$sub"))
             {
@@ -435,9 +478,11 @@ namespace BNC
 
         private static void OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
+
             if (!Context.IsWorldReady)
                 return;
 
+ 
 
             if (Config.IsDebugMode())
             {
@@ -486,35 +531,47 @@ namespace BNC
             else if (BNC_Core.config.Use_Bits_To_Spawn_Mobs && e.ChatMessage.Bits > 0)
             {
                 BitCount += e.ChatMessage.Bits;
+                MatchCollection matches = Regex.Matches(e.ChatMessage.Message.ToLower(), "cheer([0-9]+)");
 
-
-                TwitchMobType? type = (TwitchMobType)Spawner.GetMonsterFromBits(e.ChatMessage.Bits);
-
-                if(type != null)
+                if (matches.Count > 0)
                 {
                     if (Config.ShowDebug())
-                        BNC_Core.Logger.Log($"Adding monster to queue {type.ToString()} with {e.ChatMessage.Bits}bits");
-                    Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, e.ChatMessage.DisplayName);
-                }
-                else if(Config.ShowDebug())
-                    BNC_Core.Logger.Log($"Failed to add monster to queue with {e.ChatMessage.Bits}bits from {e.ChatMessage.DisplayName}");
+                        BNC_Core.Logger.Log($"Found Cheers {matches.Count} in Message. Should == {e.ChatMessage.Bits}");
 
-                /*
-                if (e.ChatMessage.Bits >= BNC_Core.config.Bits_To_Spawn_Big_Slimes)
-                {
-                    if (Config.ShowDebug())
-                        BNC_Core.Logger.Log($"Trying to spawn large slime with {e.ChatMessage.Bits}");
+                    int[] list = new int[matches.Count];
 
-                    Spawner.SpawnTwitchSlime(e.ChatMessage.Username, true);
+                    int i = 0;
+                    int totalBitsCounted = 0;
+                    foreach (Match match in matches) {
+                        int bitamt = 0;
+                        try
+                        {
+                            bitamt = int.Parse(match.Groups[1].ToString());
+                            list[i++] = bitamt;
+                            totalBitsCounted += bitamt;
+
+                        }
+                        catch { BNC_Core.Logger.Log($"{match.Groups[1].ToString()} is not a valid number from {sender}"); }
+                    }
+
+                    if (totalBitsCounted != e.ChatMessage.Bits)
+                    {
+                        BNC_Core.Logger.Log($"Could not match the Cheers to the total bit counts. Failed to parse data. {totalBitsCounted} != {e.ChatMessage.Bits}. Contact Developer if this was in error.");
+                        return;
+                    }
+
+                    foreach (int bitamt in list) {
+                        TwitchMobType? type = (TwitchMobType)Spawner.GetMonsterFromBits(bitamt);
+                        if (type != null)
+                        {
+                            if (Config.ShowDebug())
+                                BNC_Core.Logger.Log($"Adding monster to queue {type.ToString()} with {bitamt}bits");
+                            Spawner.AddMonsterToSpawnFromType((TwitchMobType)type, e.ChatMessage.DisplayName);
+                        }
+                        else if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"Failed to add monster to queue with {bitamt}bits from {e.ChatMessage.DisplayName}");
+                    }
                 }
-                else if (e.ChatMessage.Bits >= BNC_Core.config.Bits_To_Spawn_Slimes)
-                {
-                    int amount = Math.Max(1, ((int)e.ChatMessage.Bits / BNC_Core.config.Bits_To_Spawn_Slimes));
-                    if (Config.ShowDebug())
-                        BNC_Core.Logger.Log($"Trying to spawn slime with {e.ChatMessage.Bits}");
-                    Spawner.SpawnTwitchSlime(e.ChatMessage.Username, true);
-                }
-                */
             }
         }
 

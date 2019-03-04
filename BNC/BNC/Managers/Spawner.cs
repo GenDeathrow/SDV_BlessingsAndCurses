@@ -150,11 +150,11 @@ namespace BNC
 
         public static void ClearMobs()
         {
-            foreach (StardewValley.GameLocation location in StardewValley.Game1.locations.ToArray())
+            foreach (GameLocation location in Game1.locations.ToArray())
             {
                 foreach (NPC mob in location.characters.ToArray())
                 {
-                    if(mob is ITwitchMonster)
+                    if(mob is ITwitchMonster && Config.Should_Respawn(Game1.random))
                     {
                         location.characters.Remove(mob);
                     }
@@ -211,6 +211,7 @@ namespace BNC
 
         public static bool IsMonsterEnabled(TwitchMobType type)
         {
+
             switch (type)
             {
                 case TwitchMobType.Slime:

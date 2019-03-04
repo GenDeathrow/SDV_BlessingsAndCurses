@@ -1,4 +1,6 @@
 ﻿
+using System;
+
 namespace BNC.Configs
 {
     public class Config
@@ -22,6 +24,8 @@ namespace BNC.Configs
         public int[] Bits_To_Spawn_Bat_Range { get; set; } = new int[] { 400, 499 };
 
         public int[] Bits_To_Spawn_Big_Slimes_Range { get; set; } = new int[] { 500 };
+
+        public float Chance_To_Despawn_Bit_Mobs_On_New_Day = 0.5f;
 
         public bool Spawn_Subscriber_Junimo { get; set; } = true;
 
@@ -64,6 +68,14 @@ namespace BNC.Configs
         public static bool IsDebugMode()
         {
             return BNC_Core.config.Use_Chat_Command_Debugging;
+        }
+
+        public static bool Should_Respawn(Random rand)
+        {
+            if (rand.NextDouble() <= BNC_Core.config.Chance_To_Despawn_Bit_Mobs_On_New_Day)
+                return true;
+            else
+                return false;
         }
 
     }

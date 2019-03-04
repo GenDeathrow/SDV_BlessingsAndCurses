@@ -25,24 +25,22 @@ namespace BNC
                 TwitchIntergration.LoadConfig(helperIn);
 
             MineEvents.MineLevelChanged += MineBuffManager.mineLevelChanged;
-
             BookcaseEvents.GameQuaterSecondTick.Add(QuaterSecondUpdate);
             BookcaseEvents.GameFullSecondTick.Add(FullSecondTick);
-            TimeEvents.AfterDayStarted += NewDayEvent;
+             TimeEvents.AfterDayStarted += NewDayEvent;
             SaveEvents.AfterSave += SaveEvent;
             SaveEvents.AfterLoad += LoadEvent;
             SaveEvents.BeforeSave += BeforeSaveEvent;
             SaveEvents.AfterReturnToTitle += OnReturnToTitle;
-            SaveEvents.AfterCreate += OnCreate;
-
             BuffManager.Init();
             MineBuffManager.Init();
             Spawner.Init();
 
             //////if(DebugMode)
-                //InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
+            //InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
         }
 
+        
         Spawner spawner = new Spawner();
         private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
         {
@@ -66,10 +64,6 @@ namespace BNC
             }
         }
 
-        private void OnCreate(object sender, EventArgs e)
-        {
-        }
-
         private void OnReturnToTitle(object sender, EventArgs e)
         {
             BNCSave.clearData();
@@ -85,17 +79,13 @@ namespace BNC
             Spawner.ClearMobs();
         }
 
-
         private void SaveEvent(object sender, EventArgs e) {
             BNCSave.SaveModData(helper);
         }
 
-        static bool flag = false; 
         private void NewDayEvent(object sender, EventArgs e) {
             if (!Context.IsWorldReady)
                 return;
-
-
             if (BNC_Core.config.Random_Day_Buffs)
                 BuffManager.UpdateDay();
         }
