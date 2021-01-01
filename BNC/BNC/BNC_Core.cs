@@ -1,8 +1,9 @@
 ﻿using BNC.Configs;
-using Bookcase.Events;
+using System;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
-using System;
+using StardewModdingAPI.Utilities;
+using StardewValley;
 using static BNC.Spawner;
 
 namespace BNC
@@ -21,28 +22,44 @@ namespace BNC
             Logger = this.Monitor;
             config = helper.ReadConfig<Config>();
 
-            if(config.Enable_Twitch_Integration)
+            if (config.Enable_Twitch_Integration)
                 TwitchIntergration.LoadConfig(helperIn);
 
-            MineEvents.MineLevelChanged += MineBuffManager.mineLevelChanged;
-            BookcaseEvents.GameQuaterSecondTick.Add(QuaterSecondUpdate);
-            BookcaseEvents.GameFullSecondTick.Add(FullSecondTick);
-             TimeEvents.AfterDayStarted += NewDayEvent;
-            SaveEvents.AfterSave += SaveEvent;
-            SaveEvents.AfterLoad += LoadEvent;
-            SaveEvents.BeforeSave += BeforeSaveEvent;
-            SaveEvents.AfterReturnToTitle += OnReturnToTitle;
+            helper.Events.Player.Warped += MineBuffManager.mineLevelChanged;
+
+            helper.Events.GameLoop.UpdateTicked += this.updateTick;
+
+            helper.Events.GameLoop.DayStarted += NewDayEvent;
+
+            helper.Events.GameLoop.Saving += BeforeSaveEvent;
+            helper.Events.GameLoop.Saved += SaveEvent;
+
+            helper.Events.GameLoop.SaveLoaded += LoadEvent;
+            helper.Events.GameLoop.ReturnedToTitle += OnReturnToTitle;
+
+            //old
+            // MineEvents.MineLevelChanged += MineBuffManager.mineLevelChanged;
+            /*            BookcaseEvents.GameQuaterSecondTick.Add(QuaterSecondUpdate);
+                        BookcaseEvents.GameFullSecondTick.Add(FullSecondTick);
+                         TimeEvents.AfterDayStarted += NewDayEvent;
+                        SaveEvents.AfterSave += SaveEvent;
+                        SaveEvents.AfterLoad += LoadEvent;
+                        SaveEvents.BeforeSave += BeforeSaveEvent;
+                        SaveEvents.AfterReturnToTitle += OnReturnToTitle; */
+
+
+
+
             BuffManager.Init();
             MineBuffManager.Init();
             Spawner.Init();
 
-            //////if(DebugMode)
-            //InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
+            //Debug button
+            helper.Events.Input.ButtonPressed += this.InputEvents_ButtonPressed;
         }
-
-        
+                       
         Spawner spawner = new Spawner();
-        private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
+        private void InputEvents_ButtonPressed(object sender, ButtonPressedEventArgs e)
         {
             this.Monitor.Log(e.Button.ToString());
             if (e.Button.Equals(SButton.B)) {
@@ -51,11 +68,8 @@ namespace BNC
                     Random random = new Random();
                     TwitchMobType randomType = (TwitchMobType)values.GetValue(random.Next(values.Length));
 
-
                     string name = "test name"+ random.Next();
                     Spawner.AddMonsterToSpawnFromType(randomType, name);
-
-
 
                     //Junimo j = new TwitchJunimo(Vector2.Zero);
                     //j.Name = "test name" + (i > 0 ? "'s npc" : "");
@@ -63,7 +77,7 @@ namespace BNC
                     //Spawner.addSubToSpawn(j);
             }
         }
-
+                
         private void OnReturnToTitle(object sender, EventArgs e)
         {
             BNCSave.clearData();
@@ -90,19 +104,40 @@ namespace BNC
                 BuffManager.UpdateDay();
         }
 
-        private void QuaterSecondUpdate(Bookcase.Events.Event args)
+
+
+        private void updateTick(object sender, UpdateTickedEventArgs e)
         {
-            if (!Context.IsWorldReady)
-                return;
-            BuffManager.UpdateTick();
-            Spawner.UpdateTick();
+            if (e.IsMultipleOf(15))
+            {
+                if (!Context.IsWorldReady)
+                    return;
+                BuffManager.UpdateTick();
+                Spawner.UpdateTick();
+            }
+            else if (e.IsMultipleOf(60))
+            {
+                if (!Context.IsWorldReady)
+                    return;
+                MineBuffManager.UpdateTick();
+            }
         }
 
-        private void FullSecondTick(Bookcase.Events.Event args)
-        {
-            if (!Context.IsWorldReady)
-                return;
-            MineBuffManager.UpdateTick();
-        }
+        /*
+                private void QuaterSecondUpdate(Bookcase.Events.Event args)
+                {
+                    if (!Context.IsWorldReady)
+                        return;
+                    BuffManager.UpdateTick();
+                    Spawner.UpdateTick();
+                }
+
+                private void FullSecondTick(Bookcase.Events.Event args)
+                {
+                    if (!Context.IsWorldReady)
+                        return;
+                    MineBuffManager.UpdateTick();
+                }
+                */
     }
 }
