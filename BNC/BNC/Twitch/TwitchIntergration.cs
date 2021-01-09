@@ -338,6 +338,8 @@ namespace BNC
         {
             if (!Context.IsWorldReady)
                 return;
+            if (!BNC_Core.config.Spawn_Subscriber_Junimo)
+                return;
             Spawner.SpawnTwitchJunimo(e.Subscriber.DisplayName);
             if (Config.ShowDebug() && BNC_Core.config.Spawn_Subscriber_Junimo)
                 BNC_Core.Logger.Log($"Attemting to spawn Junimo:{e.Subscriber.DisplayName} from resub", LogLevel.Info);

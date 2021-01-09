@@ -23,7 +23,7 @@ namespace BNC
             {
                 BNC_Core.helper.Events.Display.RenderedHud += OnPostRender;
             }
-               
+
         }
 
 
@@ -89,14 +89,14 @@ namespace BNC
             WorldDate date = Game1.Date;
             bool beforeSword = date.DayOfMonth < 5 && date.Year == 1 && date.SeasonIndex == 1;
 
-            if(beforeSword)
+            if (beforeSword)
             {
                 m.MaxHealth = m.MaxHealth / 4; ;
                 m.Health = m.MaxHealth;
                 m.DamageToFarmer = m.DamageToFarmer / 3;
             }
 
-            if(minelvl <= 10)
+            if (minelvl <= 10)
             {
                 m.MaxHealth = m.MaxHealth / 2;
                 m.Health = m.MaxHealth;
@@ -112,7 +112,7 @@ namespace BNC
 
         public static void addMonsterToSpawn(Monster m, string username)
         {
-           SpawnList_AroundPlayer.Add(UpdateDifficulty(m), username);
+            SpawnList_AroundPlayer.Add(UpdateDifficulty(m), username);
         }
 
         public static void addSubToSpawn(NPC sub, string username)
@@ -122,8 +122,6 @@ namespace BNC
 
         public static void SpawnTwitchJunimo(string name)
         {
-            if (!BNC_Core.config.Spawn_Subscriber_Junimo)
-                return;
             Junimo j = new TwitchJunimo(Vector2.Zero);
             Spawner.addSubToSpawn(j, name);
         }
@@ -132,15 +130,18 @@ namespace BNC
         {
             if (!canSpawn() || pos.Equals(Game1.player.getTileLocation()) || !Game1.currentLocation.isTileLocationTotallyClearAndPlaceable(pos) || Game1.player.currentLocation.isTileOccupied(pos, ""))
             {
-                if(Config.ShowDebug())
+                if (Config.ShowDebug())
                     BNC_Core.Logger.Log($"Faild to spawn {m.displayName}:{username} at Tile:{pos.X},{pos.Y} Adding Back into Queue");
                 return false;
             }
 
             ((ITwitchMonster)m).setTwitchName(username);
+            m.displayName = username;
+            m.Name = username;
 
             m.setTilePosition((int)pos.X, (int)pos.Y);
-            Game1.player.currentLocation.characters.Add((NPC) m);
+
+            Game1.player.currentLocation.characters.Add((NPC)m);
             MobsSpawned.Add((ITwitchMonster)m);
 
             if (Config.ShowDebug())
@@ -157,7 +158,7 @@ namespace BNC
             {
                 foreach (NPC mob in location.characters.ToArray())
                 {
-                    if(mob is ITwitchMonster && Config.Should_Respawn(Game1.random))
+                    if (mob is ITwitchMonster && Config.Should_Respawn(Game1.random))
                     {
                         location.characters.Remove(mob);
                     }
@@ -292,13 +293,13 @@ namespace BNC
                         break;
                 }
             }
-            return TypeReturn;  
+            return TypeReturn;
         }
 
 
         private static int[] GetBitRangeFromMonster(TwitchMobType type)
         {
-            int[] ranges = new int[]{ -1, -2 };
+            int[] ranges = new int[] { -1, -2 };
             switch (type)
             {
                 case TwitchMobType.Slime:
@@ -390,8 +391,18 @@ namespace BNC
                     }
                 }
             }
+
         }
 
+        public static Dictionary<String, TwitchMobType> MobTypeToEnum = new Dictionary<String, TwitchMobType>() {
+            { "slime", TwitchMobType.Slime },
+            { "crab", TwitchMobType.Crab },
+            { "bug", TwitchMobType.Bug },
+            { "fly", TwitchMobType.Fly },
+            { "bat", TwitchMobType.Bat },
+            { "big_slime", TwitchMobType.BigSlime },
+        };
+        
         public enum TwitchMobType   { Slime, Crab, Bug, Fly, Bat, BigSlime }
     }
 }

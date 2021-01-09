@@ -5,6 +5,11 @@ using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
 using StardewValley;
 using static BNC.Spawner;
+using BNC.TwitchAppIntergration;
+using BNC.TwitchApp;
+using Microsoft.Xna.Framework;
+using Object = StardewValley.Object;
+using BNC.Actions;
 
 namespace BNC
 {
@@ -15,6 +20,8 @@ namespace BNC
         public static IModHelper helper;
         public static IMonitor Logger;
         public static Config config = new Config();
+        private static AppIntergration connection;
+        public static ActionManager manager;
 
         public override void Entry(IModHelper helperIn)
         {
@@ -37,6 +44,9 @@ namespace BNC
             helper.Events.GameLoop.SaveLoaded += LoadEvent;
             helper.Events.GameLoop.ReturnedToTitle += OnReturnToTitle;
 
+            manager = new ActionManager();
+            connection = new TwitchAppIntergration.AppIntergration("GenDeathrow_Stardew");
+            connection.Start();
             //old
             // MineEvents.MineLevelChanged += MineBuffManager.mineLevelChanged;
             /*            BookcaseEvents.GameQuaterSecondTick.Add(QuaterSecondUpdate);
@@ -55,7 +65,7 @@ namespace BNC
             Spawner.Init();
 
             //Debug button
-            helper.Events.Input.ButtonPressed += this.InputEvents_ButtonPressed;
+            //helper.Events.Input.ButtonPressed += this.InputEvents_ButtonPressed;
         }
                        
         Spawner spawner = new Spawner();
@@ -63,21 +73,41 @@ namespace BNC
         {
             this.Monitor.Log(e.Button.ToString());
             if (e.Button.Equals(SButton.B)) {
-                this.Monitor.Log("B was pressed");
-                Array values = Enum.GetValues(typeof(TwitchMobType));
-                    Random random = new Random();
-                    TwitchMobType randomType = (TwitchMobType)values.GetValue(random.Next(values.Length));
+                this.Monitor.Log("B was pressed", LogLevel.Debug);
 
-                    string name = "test name"+ random.Next();
-                    Spawner.AddMonsterToSpawnFromType(randomType, name);
 
-                    //Junimo j = new TwitchJunimo(Vector2.Zero);
-                    //j.Name = "test name" + (i > 0 ? "'s npc" : "");
-                    //j.collidesWithOtherCharacters.Value = false;
-                    //Spawner.addSubToSpawn(j);
+
+                Farmer who = Game1.player;
+                for (int i = 0; i < 10; i++)
+                {
+                    Item bomb = Utility.getItemFromStandardTextDescription($"O 286 1", who);
+                    BombEvent.updateQueue.Enqueue(bomb);
+                }
+
+
+                this.Monitor.Log($"list: {BombEvent.updateQueue.Count}", LogLevel.Debug);
             }
         }
-                
+
+
+        private static Vector2 getRangeFromPlayer(int range, int minRange = 3)
+        {
+            int xStart = Game1.player.getTileX() - range;
+            int yStart = Game1.player.getTileY() - range;
+
+            int randX = Game1.random.Next(range * 2 + 2);
+            int randY = Game1.random.Next(range * 2 + 2);
+
+
+            Vector2 vector = new Vector2(xStart + randX, yStart + randY);
+            while (Vector2.Distance(vector, Game1.player.getTileLocation()) < minRange)
+            {
+                vector.X = xStart + Game1.random.Next(range * 2 + 2);
+                vector.Y = yStart + Game1.random.Next(range * 2 + 2);
+            }
+            return vector;
+        }
+
         private void OnReturnToTitle(object sender, EventArgs e)
         {
             BNCSave.clearData();
@@ -101,43 +131,33 @@ namespace BNC
             if (!Context.IsWorldReady)
                 return;
             if (BNC_Core.config.Random_Day_Buffs)
+            {
                 BuffManager.UpdateDay();
+            }
+
+            //Allow Weather to change again. 
+            Weather.clearForNewDay();
         }
 
 
 
         private void updateTick(object sender, UpdateTickedEventArgs e)
         {
+
+            if (!Context.IsWorldReady)
+                return;
+
             if (e.IsMultipleOf(15))
             {
-                if (!Context.IsWorldReady)
-                    return;
                 BuffManager.UpdateTick();
                 Spawner.UpdateTick();
+                manager.Update();
+                BombEvent.UpdateTick();
             }
             else if (e.IsMultipleOf(60))
             {
-                if (!Context.IsWorldReady)
-                    return;
                 MineBuffManager.UpdateTick();
             }
         }
-
-        /*
-                private void QuaterSecondUpdate(Bookcase.Events.Event args)
-                {
-                    if (!Context.IsWorldReady)
-                        return;
-                    BuffManager.UpdateTick();
-                    Spawner.UpdateTick();
-                }
-
-                private void FullSecondTick(Bookcase.Events.Event args)
-                {
-                    if (!Context.IsWorldReady)
-                        return;
-                    MineBuffManager.UpdateTick();
-                }
-                */
     }
 }

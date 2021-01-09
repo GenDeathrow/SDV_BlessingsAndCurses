@@ -95,8 +95,8 @@ namespace BNC
         {
             if(queuedBuff.Count() >= 1)
             {
-                buffPlayer(queuedBuff[0]);
-                queuedBuff.RemoveAt(0);
+                if(buffPlayer(queuedBuff[0]))
+                    queuedBuff.RemoveAt(0);
             }
         }
 
@@ -133,12 +133,26 @@ namespace BNC
 
         }
 
-        public static void buffPlayer(BuffOption buff)
+
+        public static bool buffPlayer(BuffOption buff)
         {
+            List<Buff> Duppiclates = Game1.buffsDisplay.otherBuffs.Where(b => b.source == buff.displayName).ToList();
+            if (Duppiclates.Count() > 0)
+            {
+                BNC_Core.Logger.Log("Found Duplicates", StardewModdingAPI.LogLevel.Debug);
+
+                foreach (Buff buffitem in Game1.buffsDisplay.otherBuffs.ToArray())
+                {
+                        if(buffitem.source == buff.displayName)
+                        {
+                            buff.CombineBuffs(buffitem);
+                            Game1.buffsDisplay.otherBuffs.Remove(buffitem);
+                        }
+                }
+            }
+
+
             Buff buffselected = new Buff(buff.farming, buff.fishing, buff.mining, 0, 0, buff.foraging, buff.crafting, buff.maxStamina, buff.magneticRadius, buff.speed, buff.defense, buff.attack, buff.duration, buff.displayName, buff.displayName);
-
-            buffselected.source = buff.displayName;
-
             if (buff.color != Color.White)
                 buffselected.glow = buff.color;
 
@@ -150,6 +164,8 @@ namespace BNC
             }
 
             Game1.addHUDMessage(new HUDMessage(buff.shortdesc, buff.isBuff ? 4 : 3));
+
+            return true;
         }
 
         public static int setNextBuffDay(int number1, int number2)
@@ -282,6 +298,26 @@ namespace BNC
             public BuffOption setGlow(Color color)
             {
                 this.color = color;
+                return this;
+            }
+
+            public BuffOption CombineBuffs(Buff buff)
+            {
+                this.farming += buff.buffAttributes[0];
+                this.fishing += buff.buffAttributes[1];
+                this.mining += buff.buffAttributes[2];
+                this.luck += buff.buffAttributes[4];
+                this.foraging += buff.buffAttributes[5];
+                this.crafting += buff.buffAttributes[6];
+                this.maxStamina += buff.buffAttributes[7];
+                this.magneticRadius += buff.buffAttributes[8];
+                this.speed += buff.buffAttributes[9];
+                this.defense += buff.buffAttributes[10];
+                this.attack += buff.buffAttributes[11];
+
+                if (speed > 20)
+                    this.speed = 20;
+
                 return this;
             }
 

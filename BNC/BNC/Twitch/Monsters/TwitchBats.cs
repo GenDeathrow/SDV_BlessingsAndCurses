@@ -10,6 +10,7 @@ namespace BNC.Twitch
 {
     class TwitchBat : Bat, ITwitchMonster
     {
+        public TwitchBat() { }
         public TwitchBat(Vector2 position, int mineLevel) : base(position, mineLevel)
         {
         }
@@ -57,6 +58,8 @@ namespace BNC.Twitch
         public void setTwitchName(string username)
         {
             TwitchName = username;
+            this.Name = username;
+            this.displayName = username;
         }
     }
 }

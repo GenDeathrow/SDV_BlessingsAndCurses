@@ -6,6 +6,7 @@ namespace BNC.Twitch
 {
     class TwitchCrab : RockCrab, ITwitchMonster
     {
+        public TwitchCrab() { }
         public TwitchCrab(Vector2 position) : base(position)
         {
         }
@@ -20,6 +21,8 @@ namespace BNC.Twitch
         public void setTwitchName(string username)
         {
             TwitchName = username;
+            this.Name = username;
+            this.displayName = username;
         }
     }
 }
