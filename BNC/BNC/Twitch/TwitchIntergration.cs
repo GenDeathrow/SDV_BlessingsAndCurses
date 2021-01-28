@@ -1,4 +1,5 @@
 ﻿using BNC.Configs;
+using BNC.Managers.Augments;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -34,12 +35,15 @@ namespace BNC
 
         public static bool hasMinePollStarted;
 
+        public static bool hasAugPollStarted;
+
 
 
         public static Dictionary<BuffManager.BuffOption, int> votes;
         public static Dictionary<MineBuffManager.AugmentOption, int> augvotes;
+        public static Dictionary<BaseAugment, int> augmentvotes;
 
-        
+
         private static int currentTick = 30;
 
         private static List<String> currentDisplayText = new List<string>();
@@ -111,7 +115,10 @@ namespace BNC
                     EndBuffPoll();
                 else if (hasMinePollStarted)
                     EndMinePoll();
+                else if (hasAugPollStarted)
+                    EndAugPoll();
         }
+
 
         private static void UpdateVotingText()
         {
@@ -134,6 +141,17 @@ namespace BNC
                 foreach (int count in augvotes.Values)
                     maximum += count;
                 foreach (KeyValuePair<MineBuffManager.AugmentOption, int> vote in augvotes)
+                {
+                    int perc = (vote.Value == 0 || maximum == 0) ? 0 : Convert.ToInt32(((double)vote.Value / maximum) * 100);
+                    currentDisplayText.Add($"{vote.Key.DisplayName} [{vote.Key.id}] ({perc}%) -- {vote.Key.desc}");
+                }
+            }
+            else if (hasAugPollStarted)
+            {
+                int maximum = 0;
+                foreach (int count in augmentvotes.Values)
+                    maximum += count;
+                foreach (KeyValuePair<BaseAugment, int> vote in augmentvotes)
                 {
                     int perc = (vote.Value == 0 || maximum == 0) ? 0 : Convert.ToInt32(((double)vote.Value / maximum) * 100);
                     currentDisplayText.Add($"{vote.Key.DisplayName} [{vote.Key.id}] ({perc}%) -- {vote.Key.desc}");
@@ -277,6 +295,8 @@ namespace BNC
             UpdateVotingText();
         }
 
+
+
         public static void EndMinePoll()
         {
             if (Config.ShowDebug())
@@ -316,6 +336,74 @@ namespace BNC
 
             augvotes.Clear();
         }
+
+
+        // New Augments
+        public static void StartAugPoll(BaseAugment[] augments)
+        {
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Poll has started...", LogLevel.Info);
+
+            sendMessage($"---> TIME TO CHOOSE A COMBAT AUGMENT!");
+
+            augmentvotes = new Dictionary<BaseAugment, int>();
+            string buildMsg = "[";
+            foreach (BaseAugment aug in augments)
+            {
+                buildMsg += $"{aug.id} {(augments[augments.Length - 1] == aug ? "" : " / ")}";
+                augmentvotes.Add(aug, 0);
+            }
+            buildMsg += "]";
+
+            sendMessage(buildMsg);
+
+            timer.Start();
+            BNC_Core.augmentManager.Clear();
+            hasAugPollStarted = true;
+            usersVoted.Clear();
+            UpdateVotingText();
+        }
+
+        private static void EndAugPoll()
+        {
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Poll has ended!", LogLevel.Info);
+            currentTick = Config.getVotingTime();
+            timer.Stop();
+            hasAugPollStarted = false;
+
+            if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Time to tally the votes!", LogLevel.Info);
+
+            BaseAugment selectedId = null;
+            int votecount = -1;
+            foreach (KeyValuePair<BaseAugment, int> vote in augmentvotes)
+            {
+                if (vote.Value > votecount)
+                {
+                    votecount = vote.Value;
+                    selectedId = vote.Key;
+                }
+            }
+
+            if (selectedId != null)
+            {
+                if (Config.ShowDebug())
+                    BNC_Core.Logger.Log($"Chat has selected {selectedId.DisplayName} : vote# {votecount}", LogLevel.Info);
+                
+                BNC_Core.augmentManager.AddAugmentQueue(selectedId);
+
+                sendMessage($"Chat has spoken! Selected {selectedId.DisplayName}!");
+
+                if (selectedId.DisplayName != null)
+                    Game1.addHUDMessage(new HUDMessage(selectedId.DisplayName, null));
+            }
+            else if (Config.ShowDebug())
+                BNC_Core.Logger.Log($"Error: {selectedId} Buff was null", LogLevel.Info);
+
+            augvotes.Clear();
+        }
+        // End Augments
 
 
         public static void Connet()
@@ -535,6 +623,21 @@ namespace BNC
                     }
                 }
             }
+            else if (hasAugPollStarted && !usersVoted.Contains(e.ChatMessage.UserId))
+            {
+                List<BaseAugment> keysvalue = new List<BaseAugment>(augmentvotes.Keys);
+                foreach (BaseAugment vote in keysvalue)
+                {
+                    if (vote.id.ToLower().Equals(e.ChatMessage.Message.Trim().ToLower()))
+                    {
+                        augmentvotes[vote]++;
+                        if (Config.ShowDebug())
+                            BNC_Core.Logger.Log($"Recieved Vote for {vote.id} : #{augmentvotes[vote]}", LogLevel.Info);
+                        usersVoted.Add(e.ChatMessage.UserId);
+                        UpdateVotingText();
+                    }
+                }
+            }
             else if (BNC_Core.config.Use_Bits_To_Spawn_Mobs && e.ChatMessage.Bits > 0)
             {
                 BitCount += e.ChatMessage.Bits;
@@ -600,8 +703,10 @@ namespace BNC
 
 
         private static void GraphicsEvents_OnPostRenderHudEvent(object sender, EventArgs e)
-        {
-            if (!Context.IsWorldReady || (!hasPollStarted && !hasMinePollStarted) || currentDisplayText.Count < 1 &&  Game1.CurrentEvent == null)
+        {//|| (!hasPollStarted && !hasMinePollStarted)
+            if (!Context.IsWorldReady || (!hasPollStarted && !hasAugPollStarted)  || currentDisplayText.Count < 1 &&  Game1.CurrentEvent == null)
+                return;
+            if (currentTick <= 0)
                 return;
 
             int num1 = 64;
@@ -631,6 +736,8 @@ namespace BNC
                 x += num2;
                 y = Game1.viewport.Height - height;
             }
+
+            x += 13;
             int cnt = 0;
             IClickableMenu.drawTextureBox(spriteBatch, Game1.menuTexture, new Rectangle(0, 256, 60, 60), x, y, width, height+ 35, Color.White, 1f, true);
             Utility.drawTextWithShadow(spriteBatch, "Vote: ", smallFont, new Vector2((float)(x + num1 / 4), (float)(y + num1 / 4) + (cnt++ * vector2.Y)), Color.Purple, 1f, -1f, -1, -1, 1f, 3);

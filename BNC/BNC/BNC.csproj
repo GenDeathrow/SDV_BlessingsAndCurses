@@ -23,6 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony, Version=2.0.4.0, Culture=neutral, processorArchitecture=MSIL">
@@ -72,10 +74,31 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Meteor.cs" />
+    <Compile Include="CloneJson.cs" />
+    <Compile Include="Managers\AugmentManager.cs" />
+    <Compile Include="Managers\Augments\BaseAugment.cs" />
+    <Compile Include="Managers\Augments\Phasing.cs" />
+    <Compile Include="Managers\Augments\Trolls.cs" />
+    <Compile Include="Managers\Augments\Teleport.cs" />
+    <Compile Include="Managers\Augments\Extra.cs" />
+    <Compile Include="Managers\Augments\Crabs.cs" />
+    <Compile Include="Managers\Augments\Speed.cs" />
+    <Compile Include="Managers\Augments\Exp.cs" />
+    <Compile Include="Managers\Augments\Harder.cs" />
+    <Compile Include="Managers\Augments\Health.cs" />
+    <Compile Include="Managers\Augments\Regen.cs" />
+    <Compile Include="Managers\Augments\Stamina.cs" />
+    <Compile Include="Managers\Augments\Tired.cs" />
+    <Compile Include="Managers\Augments\Blood.cs" />
     <Compile Include="TwitchApp\Actions\BaseAction.cs" />
+    <Compile Include="TwitchApp\Actions\Gift.cs" />
     <Compile Include="TwitchApp\Actions\ITickable.cs" />
+    <Compile Include="TwitchApp\Actions\FireballEvent.cs" />
     <Compile Include="TwitchApp\Actions\ScreenFlash.cs" />
     <Compile Include="TwitchApp\Actions\BombEvent.cs" />
+    <Compile Include="TwitchApp\Actions\MeteorStorm.cs" />
+    <Compile Include="TwitchApp\Actions\SpawnCat.cs" />
     <Compile Include="TwitchApp\Actions\Weather.cs" />
     <Compile Include="TwitchApp\Actions\Command.cs" />
     <Compile Include="TwitchApp\Actions\CustomBuff.cs" />
@@ -113,7 +136,9 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <Content Include="assets\Meteor.png" />
     <Content Include="assets\Statue.png" />
+    <Content Include="music\MeteorInbound.mp3" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

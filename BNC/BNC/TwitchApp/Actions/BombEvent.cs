@@ -64,7 +64,8 @@ namespace BNC.Actions
             else x = (int)who.position.X + x;
             y = (int)who.position.Y + y;
 
-            if (Utility.tryToPlaceItem(who.currentLocation, bomb, x, y))
+            Vector2 tileLocation = new Vector2(x / 64, y / 64);
+            if (((StardewValley.Object)bomb).placementAction(who.currentLocation, x, y, Game1.player))
             {
                 return ActionResponse.Done;
             }

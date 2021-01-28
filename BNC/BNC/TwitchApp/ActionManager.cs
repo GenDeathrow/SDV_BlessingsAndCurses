@@ -13,12 +13,13 @@ namespace BNC.TwitchApp
     public class ActionManager
     {
         private Dictionary<string, Type> _actions = new Dictionary<string, Type>();
-        private ConcurrentQueue<BaseAction> _actionQueue = new ConcurrentQueue<BaseAction>();
+        public ConcurrentQueue<BaseAction> _actionQueue = new ConcurrentQueue<BaseAction>();
         private ConcurrentQueue<BaseAction> _tickQueue = new ConcurrentQueue<BaseAction>();
 
         public ActionManager()
         {
             AddAction(typeof(HealPlayer));
+            AddAction(typeof(SpawnCat));
             AddAction(typeof(Buff));
             AddAction(typeof(CustomBuff));
             AddAction(typeof(GiveMoney));
@@ -28,6 +29,10 @@ namespace BNC.TwitchApp
             AddAction(typeof(Weather));
             AddAction(typeof(BombEvent));
             AddAction(typeof(ScreenFlash));
+            AddAction(typeof(MeteorStorm));
+
+            //Init Cat handlers
+            SpawnCat.Init();
         }
 
         private void AddAction(Type action)

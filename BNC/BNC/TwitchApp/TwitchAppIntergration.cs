@@ -16,7 +16,6 @@ namespace BNC.TwitchAppIntergration
         private CancellationTokenSource _source;
         private Task _task;
 
-        //public IntegrationManager(RiskOfIntegration plugin, string connection)
         public AppIntergration(string connection)
         {
             _connection = connection;
@@ -133,13 +132,13 @@ namespace BNC.TwitchAppIntergration
             {
                BNC_Core.Logger.Log(line, LogLevel.Debug);
                 var action = line.Substring(8);
-                BNC_Core.manager.HandleAction(action);
+                BNC_Core.actionManager.HandleAction(action);
             }
             else if (line.StartsWith("Message: "))
             {
                 BNC_Core.Logger.Log(line, LogLevel.Debug);
                 var message = line.Substring(9);
-                BNC_Core.manager.HandleMessage(message);
+                BNC_Core.actionManager.HandleMessage(message);
             }
         }
     }
